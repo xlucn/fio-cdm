@@ -97,7 +97,7 @@ class Job:
             cmd = ['fio', '--output-format', 'json', jobfile]
             output = subprocess.check_output(cmd)
         except KeyboardInterrupt:
-            print('interrupted, cleaning up before exit...')
+            logging.info('interrupted, cleaning up before exit...')
             exit(1)
         finally:
             # TODO: clean up
@@ -143,7 +143,9 @@ class Job:
         for job in self.jobs:
             jobname = self._jobname_templ(job)
             for rw in ["Read", "Write", "Mix"]:
-                for f in glob.glob(jobname.format(rw=rw) + "*"):
+                wildcard = os.path.join(args.target, jobname.format(rw=rw) + "*")
+                for f in glob.glob(wildcard):
+                    logging.debug("Removig file %s", f)
                     os.remove(f)
 
     def _check_disk_space(self):
