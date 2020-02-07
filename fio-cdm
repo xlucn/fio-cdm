@@ -12,7 +12,7 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 # TODO: figure out the filenames, thread numbers, etc
 class Job:
-    def __init__(self, size, numjobs, directory):
+    def __init__(self, size, directory):
         self.jobs = []
         self.bandwidth = {}
         self.config = configparser.ConfigParser(allow_no_value=True)
@@ -22,8 +22,6 @@ class Job:
                 # TODO: time vary with number of jobs
                 'runtime': '120',
                 'size': size,
-                # TODO: numjobs seems to be the thread number, change it
-                'numjobs': numjobs,
                 # TODO
                 #  'filename': filename,
                 'directory': directory,
@@ -75,6 +73,7 @@ class Job:
         for name, rw in [("Read","read"), ("Write", "write"), ("Mix", "rw")]:
             self.config.read_dict({
                 jobname_templ.format(rw=name): {
+                    'numjobs': thread_num,
                     'iodepth': queue_size,
                     'bs': blocksize,
                     'rw': rw if rw_type == 'seq' else 'rand' + rw,
@@ -154,7 +153,7 @@ class Job:
         needed = 0
         for job in self.jobs:
             bs = 2**20 if job["bs"] == "1m" else 4096
-            needed += bs * args.number
+            needed += bs * job["t"]
         logging.debug("Target: %s\navailable: %s\nneeded: %s",
                       args.target, avail, needed)
         if avail > needed:
@@ -168,6 +167,7 @@ class Job:
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('target', help='The path of the directory to test')
+    # TODO: run multiple times
     parser.add_argument('-n', metavar='number',
                         type=int,
                         default=1,
@@ -202,7 +202,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logging.debug(args)
 
-    fio_job = Job(args.s, args.n, args.target)
+    fio_job = Job(args.s, args.target)
     fio_job.create_job('seq', 1, 1)
     #  fio_job.create_job('rand', 1, 1)
     #  fio_job.create_job('rand', 16, 1)
