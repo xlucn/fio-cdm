@@ -85,8 +85,8 @@ class Job:
 
     def run(self):
         jobfile = 'jobfile'
-        if args.dump_jobfile:
-            self.create_jobfile(args.dump_jobfile)
+        if args.f:
+            self.create_jobfile(args.f)
             exit()
         else:
             self.create_jobfile(jobfile)
@@ -122,7 +122,7 @@ class Job:
                 self.bandwidth[job['jobname']] = job['write']['bw_bytes'] / unit
 
     def print_result(self):
-        if args.mix:
+        if args.x:
             print("|Name        | Read  | Write |  Mix  |\n"
                   "|------------|-------|-------|-------|")
             template_row = "|{jobname}|{read:7.2f}|{write:7.2f}|{mix:7.2f}|"
@@ -137,7 +137,7 @@ class Job:
                 jobname=self._displayname(job),
                 read=self.bandwidth[jobname.format(rw="Read")],
                 write=self.bandwidth[jobname.format(rw="Write")],
-                mix=self.bandwidth[jobname.format(rw="Mix")] if args.mix else 0
+                mix=self.bandwidth[jobname.format(rw="Mix")] if args.x else 0
             ))
 
     def _clean_testfiles(self):
@@ -202,7 +202,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logging.debug(args)
 
-    fio_job = Job(args.size, args.number, args.target)
+    fio_job = Job(args.s, args.n, args.target)
     fio_job.create_job('seq', 1, 1)
     #  fio_job.create_job('rand', 1, 1)
     #  fio_job.create_job('rand', 16, 1)
