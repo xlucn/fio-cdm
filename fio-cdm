@@ -58,7 +58,6 @@ class Job:
                 self.config.write(f, space_around_delimiters=False)
 
     def create_job(self, rw_type, queue_size, thread_num):
-        # fix the block size to 1M (sequential) or 4K (random)
         blocksize = '1m' if rw_type == 'seq' else '4k'
 
         job = {
@@ -68,16 +67,20 @@ class Job:
             "t": thread_num
         }
         self.jobs.append(job)
-        jobname_templ = self._jobname_templ(job)
 
-        for name, rw in [("Read","read"), ("Write", "write"), ("Mix", "rw")]:
+        if args.x == 0:
+            rw_name_type = [("Read","read"), ("Write", "write")]
+        else:
+            rw_name_type = [("Read","read"), ("Write", "write"), ("Mix", "rw")]
+
+        for name, rw in rw_name_type:
             self.config.read_dict({
-                jobname_templ.format(rw=name): {
-                    'numjobs': thread_num,
-                    'iodepth': queue_size,
+                self._jobname_templ(job).format(rw=name): {
                     'bs': blocksize,
                     'rw': rw if rw_type == 'seq' else 'rand' + rw,
-                    'rwmixread': 50,
+                    'rwmixread': args.x,
+                    'iodepth': queue_size,
+                    'numjobs': thread_num,
                     'stonewall': None
                 }
             })
