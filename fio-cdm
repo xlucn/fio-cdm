@@ -209,6 +209,10 @@ Examples:
                         default=0,
                         help='''Add mixed rw test, default is disabled.
                              <mix> is read percentage (integer), default is 70.''')
+    parser.add_argument('-a', metavar='job',
+                        nargs="+",
+                        help='''Manually add multiple jobs. Override default.
+                             Format is \"seq|rand,queue depth,thread number\".''')
     parser.add_argument('-f', metavar='dump-jobfile',
                         help='''Save jobfile and quit without running fio.
                              Use \'-\' to print to stdout.''')
@@ -224,9 +228,14 @@ if __name__ == '__main__':
     logging.debug(args)
 
     fio_job = Job(args.s, args.target)
-    fio_job.create_job('seq', 1, 1)
-    #  fio_job.create_job('rand', 1, 1)
-    #  fio_job.create_job('rand', 16, 1)
-    #  fio_job.create_job('rand', 32, 8)
+    if args.a:
+        for job in args.a:
+            rw_type, qd, tn = job.split(',')
+            fio_job.create_job(rw_type, int(qd), int(tn))
+    else:
+        fio_job.create_job('seq', 32, 1)
+        #  fio_job.create_job('rand', 1, 1)
+        #  fio_job.create_job('rand', 16, 1)
+        #  fio_job.create_job('rand', 32, 8)
     fio_job.run()
     fio_job.print_result()
