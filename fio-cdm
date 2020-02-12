@@ -10,7 +10,28 @@ import subprocess
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
-# TODO: figure out the filenames, thread numbers, etc
+
+def readable2byte(num):
+    units = {'k': 1, 'm': 2, 'g': 3, 't': 4}
+    num = num.lower().rstrip("b").rstrip("i")
+    if num[-1] in units.keys():
+        return int(num[:-1]) * 1024 ** units[num[-1]]
+    elif num[-1].isdigit():
+        return int(num)
+    else:
+        logging.error("Unrecognised unit: %s(i)B. Largest available is TiB",
+                      num[-1].upper())
+        exit(1)
+
+
+def byte2readable(num):
+    for unit in ['', 'Ki', 'Mi', 'Gi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%sB" % (num, unit)
+        num /= 1024.0
+    return "%.1f%sB" % (num, 'Ti')
+
+
 class Job:
     def __init__(self, size, directory):
         self.jobs = []
@@ -22,8 +43,6 @@ class Job:
                 # TODO: time vary with number of jobs
                 'runtime': '120',
                 'size': size,
-                # TODO
-                #  'filename': filename,
                 'directory': directory,
                 'fdatasync': '1',
                 'direct': '1',
@@ -87,14 +106,14 @@ class Job:
 
     def run(self):
         jobfile = 'jobfile'
+        if not self._check_disk_space():
+            exit(1)
+
         if args.f:
             self.create_jobfile(args.f)
             exit()
         else:
             self.create_jobfile(jobfile)
-
-        if not self._check_disk_space():
-            exit(1)
 
         try:
             cmd = ['fio', '--output-format', 'json', jobfile]
@@ -103,7 +122,6 @@ class Job:
             logging.info('interrupted, cleaning up before exit...')
             exit(1)
         finally:
-            # TODO: clean up
             self._clean_testfiles()
             os.remove(jobfile)
 
@@ -152,20 +170,20 @@ class Job:
                     os.remove(f)
 
     def _check_disk_space(self):
-        # TODO: not sure
         statvfs = os.statvfs(args.target)
         avail = statvfs.f_frsize * statvfs.f_bfree
         needed = 0
+
         for job in self.jobs:
-            bs = 2**20 if job["bs"] == "1m" else 4096
-            needed += bs * job["t"]
+            needed += readable2byte(args.s) * job["t"]
         logging.debug("Target: %s\navailable: %s\nneeded: %s",
-                      args.target, avail, needed)
+                      args.target, byte2readable(avail), byte2readable(needed))
         if avail > needed:
             return True
         else:
             logging.warning("Not enough space available in %s:", args.target)
-            logging.warning("Needed: %s. Available: %s", needed, avail)
+            logging.warning("Needed: %s. Available: %s",
+                            byte2readable(needed), byte2readable(avail))
             return False
 
 
