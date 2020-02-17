@@ -139,7 +139,10 @@ class Job:
             if rw == 'write' or rw == 'randwrite':
                 self.bandwidth[job['jobname']] = job['write']['bw_bytes'] / unit
             if rw == 'rw' or rw == 'randrw':
-                self.bandwidth[job['jobname']] = job['write']['bw_bytes'] / unit
+                self.bandwidth[job['jobname']] = job['read']['bw_bytes'] / unit \
+                                                 * args.x / 100.0 \
+                                                 + job['write']['bw_bytes'] / unit \
+                                                 * (1 - args.x / 100.0)
 
     def print_result(self):
         if args.x:
