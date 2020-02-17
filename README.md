@@ -27,7 +27,7 @@ optional arguments:
 
 ### Note
 
-Do not add argument <target> after -x (as in "fio-cdm -x <target>"), it will be regarded as <mix> but an error will pop up since -x optionally needs an integer.
+Do not add argument `<target>` after -x (as in `fio-cdm -x <target>`), it will be regarded as `<mix>` but an error will pop up since -x only accepts an integer.
 
 ### Examples
 
