@@ -111,10 +111,12 @@ class Job:
             output = subprocess.check_output(['fio', '--output-format', 'json', self._jobfile_name])
         except KeyboardInterrupt:
             logging.info('interrupted, cleaning up before exit...')
-            exit(1)
+            exit()
         finally:
-            os.remove(os.path.join(args.target, self._jobfile_name))
-            os.remove(os.path.join(args.target, self._testfile_name))
+            if os.path.exists(os.path.join(args.target, self._jobfile_name)):
+                os.remove(os.path.join(args.target, self._jobfile_name))
+            if os.path.exists(os.path.join(args.target, self._testfile_name)):
+                os.remove(os.path.join(args.target, self._testfile_name))
 
         logging.debug(output.decode('utf-8'))
         info = json.loads(output)
