@@ -7,7 +7,7 @@ import logging
 import configparser
 import subprocess
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"), format="%(message)s")
 
 
 def readable2byte(num):
@@ -18,8 +18,7 @@ def readable2byte(num):
     elif num[-1].isdigit():
         return int(num)
     else:
-        logging.error("Unrecognised unit: %s(i)B. Largest available is TiB",
-                      num[-1].upper())
+        logging.error("Unrecognised size: %s(i)B. Largest unit available is TiB", num.upper())
         exit(1)
 
 
@@ -55,20 +54,11 @@ class Job:
             }
         })
 
-    def _jobname_templ(self, job_dict):
-        jobname = "Seq-" if job_dict["rw"] == 'seq' else "Rand-"
-        jobname += "{rw}-"
-        jobname += "{}".format(job_dict["bs"].upper())
-        jobname += "-Q{}".format(job_dict["q"]) if job_dict["q"] > 1 else ""
-        jobname += "-T{}".format(job_dict["t"]) if job_dict["t"] > 1 else ""
-        return jobname
+    def _jobname_templ(self, job):
+        return "{}-{{rw}}-{}-Q{}-T{}".format(job["rw"].title(), job["bs"], job["q"], job["t"])
 
-    def _displayname(self, job_dict):
-        displayname = "SEQ" if job_dict["rw"] == 'seq' else "RND"
-        displayname += "{} ".format(job_dict["bs"].upper())
-        displayname += "Q{:2}".format(str(job_dict["q"]))
-        displayname += "T{:2}".format(str(job_dict["t"]))
-        return displayname
+    def _displayname(self, job):
+        return "{}{} Q{:2}T{:2}".format(job["rw"], job["bs"], str(job["q"]), str(job["t"])).upper()
 
     def _create_jobfile(self, jobfile):
         if jobfile == '-':
@@ -78,17 +68,18 @@ class Job:
                 self.config.write(f, space_around_delimiters=False)
 
     def create_job(self, rw_type, queue_size, thread_num):
-        blocksize = '1m' if rw_type == 'seq' else '4k'
+        if rw_type == 'seq':
+            blocksize = '1m' 
+        elif rw_type == 'rnd':
+            blocksize = '4k'
+        else:
+            logging.error("Job rw type only accepts \"seq\" and \"rnd\"")
+            exit(1)
 
-        job = {
-            "rw": rw_type,
-            "bs": blocksize,
-            "q": queue_size,
-            "t": thread_num
-        }
+        job = {"rw": rw_type, "bs": blocksize, "q": queue_size, "t": thread_num}
         self.jobs.append(job)
 
-        if args.x == 0:
+        if args.mix == 0:
             rw_name_type = [("Read","read"), ("Write", "write")]
         else:
             rw_name_type = [("Read","read"), ("Write", "write"), ("Mix", "rw")]
@@ -98,7 +89,7 @@ class Job:
                 self._jobname_templ(job).format(rw=name): {
                     'bs': blocksize,
                     'rw': rw if rw_type == 'seq' else 'rand' + rw,
-                    'rwmixread': args.x,
+                    'rwmixread': args.mix,
                     'iodepth': queue_size,
                     'numjobs': thread_num,
                     'stonewall': None
@@ -138,13 +129,11 @@ class Job:
             if rw == 'write' or rw == 'randwrite':
                 self.bandwidth[job['jobname']] = job['write']['bw_bytes'] / unit
             if rw == 'rw' or rw == 'randrw':
-                self.bandwidth[job['jobname']] = job['read']['bw_bytes'] / unit \
-                                                 * args.x / 100.0 \
-                                                 + job['write']['bw_bytes'] / unit \
-                                                 * (1 - args.x / 100.0)
+                self.bandwidth[job['jobname']] = (job['read']['bw_bytes'] * args.mix +
+                                                  job['write']['bw_bytes'] * (100.0 - args.mix)) / 100.0 / unit
 
     def print_result(self):
-        if args.x:
+        if args.mix:
             print("|Name        | Read  | Write |  Mix  |\n"
                   "|------------|-------|-------|-------|")
             template_row = "|{jobname}|{read:7.2f}|{write:7.2f}|{mix:7.2f}|"
@@ -159,7 +148,7 @@ class Job:
                 jobname=self._displayname(job),
                 read=self.bandwidth[jobname.format(rw="Read")],
                 write=self.bandwidth[jobname.format(rw="Write")],
-                mix=self.bandwidth[jobname.format(rw="Mix")] if args.x else 0
+                mix=self.bandwidth.get(jobname.format(rw="Mix"))
             ))
 
     def _check_disk_space(self):
@@ -171,8 +160,7 @@ class Job:
             return True
         else:
             logging.warning("Not enough space available in %s:", args.target)
-            logging.warning("Needed: %s. Available: %s",
-                            byte2readable(needed), byte2readable(avail))
+            logging.warning("Needed: %s. Available: %s", byte2readable(needed), byte2readable(avail))
             return False
 
 
@@ -184,7 +172,7 @@ def get_parser():
 Note:
     Do not add argument <target> after -x (as in \"fio-cdm -x <target>\"), \
 it will be regarded as <mix> but an error will pop up since -x optionally \
-needs an integer.
+needs a number.
 
 Examples:
     Set test file size to 512MB, run 5 times with read, write and mix tests \
@@ -192,57 +180,45 @@ Examples:
         fio-cdm -s 512m -n 5 -x 60
 
     Manually add jobs:
-        fio-cdm -a seq,1,1 seq,32,1 rand,16,8
+        fio-cdm -a seq,1,1 seq,32,1 rnd,16,8
 
     Show the equivalent command directly with fio:
         fio-cdm -f - | fio --showcmd -
 ''')
 
-    parser.add_argument('target',
+    parser.add_argument('target', default='.',
                         help='The path of the directory to test')
-    # TODO: run multiple times
-    parser.add_argument('-n', metavar='number',
-                        type=int,
-                        default=1,
+    parser.add_argument('-n', metavar='number', dest='number', type=int, default=1,
                         help='''Number of tests, default is 1''')
-    parser.add_argument('-s', metavar='size',
-                        default='1G',
-                        help='''The size of file I/O, same as the fio parameter,
-                             default is 1G''')
-    parser.add_argument('-x', metavar='mix',
-                        type=int,
-                        nargs="?",
-                        const=70,
-                        default=0,
-                        help='''Add mixed rw test, default is disabled.
-                             <mix> is read percentage (integer), default is 70.''')
-    parser.add_argument('-a', metavar='job',
-                        nargs="+",
-                        help='''Manually add multiple jobs. Override default.
-                             Format is \"seq|rand,queue depth,thread number\".''')
-    parser.add_argument('-f', metavar='dump-jobfile',
-                        help='''Save jobfile and quit without running fio.
-                             Use \'-\' to print to stdout.''')
+    parser.add_argument('-s', metavar='size', dest='size', default='1G',
+                        help='''The size of file I/O, same as the fio parameter, default is 1G''')
+    parser.add_argument('-x', metavar='mix', dest='mix', type=float, nargs="?", const=70, default=0,
+                        help='''Add mixed rw test, default is disabled. <mix> is read percentage, default is 70.''')
+    parser.add_argument('-a', metavar='job', dest='jobs', nargs="+",
+                        help='''Manually add multiple jobs. Override default. Format is \"seq|rnd,queue depth,thread number\".''')
+    parser.add_argument('-f', metavar='dump-jobfile', dest='dump_jobfile',
+                        help='''Save jobfile and quit without running fio. Use \'-\' to print to stdout.''')
     return parser
 
 
 if __name__ == '__main__':
-    # TODO: realtime visual feedback, with fio --debug
+    # TODO: realtime visual feedback, with fio --debug=io, hard
     # TODO: time upper limit do this with 'runtime'
     # TODO: show iops or latency
     parser = get_parser()
     args = parser.parse_args()
     logging.debug(args)
 
-    fio_job = Job(args.s, args.target)
-    if args.a:
-        for job in args.a:
+    fio_job = Job(args.size, args.target)
+    if args.jobs:
+        for job in args.jobs:
             rw_type, qd, tn = job.split(',')
             fio_job.create_job(rw_type, int(qd), int(tn))
     else:
         fio_job.create_job('seq', 32, 1)
-        #  fio_job.create_job('rand', 1, 1)
-        #  fio_job.create_job('rand', 16, 1)
-        #  fio_job.create_job('rand', 32, 8)
+        fio_job.create_job('rnd', 8,  8)
+        fio_job.create_job('rnd', 32, 1)
+        fio_job.create_job('rnd', 1,  1)
+
     fio_job.run()
     fio_job.print_result()
