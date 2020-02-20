@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import sys
-import glob
 import json
 import argparse
 import logging
@@ -36,15 +35,17 @@ class Job:
     def __init__(self, size, directory):
         self.jobs = []
         self.bandwidth = {}
+        self._jobfile_name = 'jobfile'
+        self._testfile_name = '.fio_testmark'
         self.config = configparser.ConfigParser(allow_no_value=True)
         self.config.read_dict({
             'global': {
                 'ioengine': 'libaio',
-                # TODO: time vary with number of jobs
-                'runtime': '120',
+                'runtime': '25',
+                'ramp_time': '5',
                 'size': size,
+                'filename': self._testfile_name,
                 'directory': directory,
-                'fdatasync': '1',
                 'direct': '1',
                 'refill_buffers': None,
                 'norandommap': None,
@@ -69,7 +70,7 @@ class Job:
         displayname += "T{:2}".format(str(job_dict["t"]))
         return displayname
 
-    def create_jobfile(self, jobfile):
+    def _create_jobfile(self, jobfile):
         if jobfile == '-':
             self.config.write(sys.stdout, space_around_delimiters=False)
         else:
@@ -105,25 +106,23 @@ class Job:
             })
 
     def run(self):
-        jobfile = 'jobfile'
         if not self._check_disk_space():
             exit(1)
 
-        if args.f:
-            self.create_jobfile(args.f)
+        if args.dump_jobfile:
+            self._create_jobfile(args.dump_jobfile)
             exit()
         else:
-            self.create_jobfile(jobfile)
+            self._create_jobfile(self._jobfile_name)
 
         try:
-            cmd = ['fio', '--output-format', 'json', jobfile]
-            output = subprocess.check_output(cmd)
+            output = subprocess.check_output(['fio', '--output-format', 'json', self._jobfile_name])
         except KeyboardInterrupt:
             logging.info('interrupted, cleaning up before exit...')
             exit(1)
         finally:
-            self._clean_testfiles()
-            os.remove(jobfile)
+            os.remove(os.path.join(args.target, self._jobfile_name))
+            os.remove(os.path.join(args.target, self._testfile_name))
 
         logging.debug(output.decode('utf-8'))
         info = json.loads(output)
@@ -163,24 +162,11 @@ class Job:
                 mix=self.bandwidth[jobname.format(rw="Mix")] if args.x else 0
             ))
 
-    def _clean_testfiles(self):
-        for job in self.jobs:
-            jobname = self._jobname_templ(job)
-            for rw in ["Read", "Write", "Mix"]:
-                wildcard = os.path.join(args.target, jobname.format(rw=rw) + "*")
-                for f in glob.glob(wildcard):
-                    logging.debug("Removig file %s", f)
-                    os.remove(f)
-
     def _check_disk_space(self):
         statvfs = os.statvfs(args.target)
         avail = statvfs.f_frsize * statvfs.f_bfree
-        needed = 0
+        needed = readable2byte(args.size)
 
-        for job in self.jobs:
-            needed += readable2byte(args.s) * job["t"]
-        logging.debug("Target: %s\navailable: %s\nneeded: %s",
-                      args.target, byte2readable(avail), byte2readable(needed))
         if avail > needed:
             return True
         else:
