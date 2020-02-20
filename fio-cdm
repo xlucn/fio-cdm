@@ -92,6 +92,7 @@ class Job:
                     'rwmixread': args.mix,
                     'iodepth': queue_size,
                     'numjobs': thread_num,
+                    'loops': args.number,
                     'stonewall': None
                 }
             })
