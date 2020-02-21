@@ -54,6 +54,9 @@ class Job:
                 'group_reporting': None
             }
         })
+        # Windows does not support pthread mutexes
+        if os.name == 'nt':
+            self.config.read_dict({ 'global': { 'thread': None } })
 
     def _jobname_templ(self, job):
         return "{}-{{rw}}-{}-Q{}-T{}".format(job["rw"].title(), job["bs"], job["q"], job["t"])
