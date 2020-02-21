@@ -122,41 +122,40 @@ class Job:
             if os.path.exists(os.path.join(args.target, self._testfile_name)):
                 os.remove(os.path.join(args.target, self._testfile_name))
 
-        logging.debug(output.decode('utf-8'))
-        info = json.loads(output)
+        fio_output = json.loads(output)
+        info = {job.pop("jobname"): job for job in fio_output["jobs"]}
+        logging.debug(info)
 
-        # Unit of I/O speed, use MB/s(10^6) instead of MiB/s(2^30).
-        unit = 10**6
+        self._print_result(info)
 
-        # TODO: don't feel right about this way of storing data
-        for job in info['jobs']:
-            rw = job['job options']['rw']
-            if rw == 'read' or rw == 'randread':
-                self.bandwidth[job['jobname']] = job['read']['bw_bytes'] / unit
-            if rw == 'write' or rw == 'randwrite':
-                self.bandwidth[job['jobname']] = job['write']['bw_bytes'] / unit
-            if rw == 'rw' or rw == 'randrw':
-                self.bandwidth[job['jobname']] = (job['read']['bw_bytes'] * args.mix +
-                                                  job['write']['bw_bytes'] * (100.0 - args.mix)) / 100.0 / unit
+    def _print_result(self, info):
+        def _print_result_line(job, name, f):
+            jobname_templ = self._jobname_templ(job)
+            read=info.get(jobname_templ.format(rw="read"))
+            write=info.get(jobname_templ.format(rw="write"))
+            mix=info.get(jobname_templ.format(rw="rw"))
+            print(template_row.format(
+                jobname=name,
+                read=f(read['read']),
+                write=f(write['write']),
+                mix=None if args.mix == 0 else (f(mix['read']) * args.mix +
+                    f(mix['write']) * (100 - args.mix)) / 100.0
+            ))
 
-    def print_result(self):
         if args.mix:
-            print("|Name        | Read  | Write |  Mix  |\n"
-                  "|------------|-------|-------|-------|")
-            template_row = "|{jobname}|{read:7.2f}|{write:7.2f}|{mix:7.2f}|"
+            print("|Name        | Read(MB/s)|Write(MB/s)|  Mix(MB/s)|\n"
+                  "|------------|-----------|-----------|-----------|")
+            template_row = "|{jobname}|{read:11.2f}|{write:11.2f}|{mix:11.2f}|"
         else:
-            print("|Name        | Read  | Write |\n"
-                  "|------------|-------|-------|")
-            template_row = "|{jobname}|{read:7.2f}|{write:7.2f}|"
+            print("|Name        | Read(MB/s)|Write(MB/s)|\n"
+                  "|------------|-----------|-----------|")
+            template_row = "|{jobname}|{read:11.2f}|{write:11.2f}|"
 
         for job in self.jobs:
-            jobname = self._jobname_templ(job)
-            print(template_row.format(
-                jobname=self._displayname(job),
-                read=self.bandwidth[jobname.format(rw="Read")],
-                write=self.bandwidth[jobname.format(rw="Write")],
-                mix=self.bandwidth.get(jobname.format(rw="Mix"))
-            ))
+            _print_result_line(job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
+            if job['rw'] == 'rnd':
+                _print_result_line(job, "... IOPS    ", lambda d: d['iops'])
+                _print_result_line(job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
 
     def _check_disk_space(self):
         avail = shutil.disk_usage(args.target).free
@@ -214,7 +213,6 @@ Examples:
 if __name__ == '__main__':
     # TODO: realtime visual feedback, with fio --debug=io, hard
     # TODO: time upper limit do this with 'runtime'
-    # TODO: show iops or latency
     parser = get_parser()
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format="%(message)s")
@@ -233,4 +231,3 @@ if __name__ == '__main__':
         fio_job.create_job('rnd', 1,  1)
 
     fio_job.run()
-    fio_job.print_result()
