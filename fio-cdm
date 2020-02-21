@@ -40,7 +40,7 @@ class Job:
         self.config = configparser.ConfigParser(allow_no_value=True)
         self.config.read_dict({
             'global': {
-                'ioengine': 'libaio',
+                'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
                 'runtime': '25',
                 'ramp_time': '5',
                 'size': size,
