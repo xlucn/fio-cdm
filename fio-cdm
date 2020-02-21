@@ -189,8 +189,8 @@ Examples:
         fio-cdm -f - | fio --showcmd -
 ''')
 
-    parser.add_argument('target', default='.',
-                        help='The path of the directory to test')
+    parser.add_argument('target', nargs='?', default='.',
+                        help='The path of the directory to test, default to current directory.')
     parser.add_argument('-n', metavar='number', dest='number', type=int, default=1,
                         help='''Number of tests, default is 1''')
     parser.add_argument('-s', metavar='size', dest='size', default='1G',
