@@ -225,9 +225,8 @@ if __name__ == '__main__':
             rw_type, qd, tn = job.split(',')
             fio_job.create_job(rw_type, int(qd), int(tn))
     else:
-        fio_job.create_job('seq', 32, 1)
-        fio_job.create_job('rnd', 8,  8)
-        fio_job.create_job('rnd', 32, 1)
-        fio_job.create_job('rnd', 1,  1)
-
+        fio_job.create_job('seq',  8,  1)
+        fio_job.create_job('seq',  1,  1)
+        fio_job.create_job('rnd', 32, 16)
+        fio_job.create_job('rnd',  1,  1)
     fio_job.run()
