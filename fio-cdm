@@ -10,6 +10,7 @@ import subprocess
 
 
 def readable2byte(num):
+    """[K|M|G|T](i)B -> byte, regard the multiply as 1024"""
     units = {'k': 1, 'm': 2, 'g': 3, 't': 4}
     num = num.lower().rstrip("b").rstrip("i")
     if num[-1] in units.keys():
@@ -22,6 +23,7 @@ def readable2byte(num):
 
 
 def byte2readable(num):
+    """byte -> [K|M|G|T]iB"""
     for unit in ['', 'Ki', 'Mi', 'Gi']:
         if abs(num) < 1024.0:
             return "%3.1f%sB" % (num, unit)
@@ -30,21 +32,22 @@ def byte2readable(num):
 
 
 class Job:
-    def __init__(self, size, directory):
+    def __init__(self):
         self.jobs = []
-        self.bandwidth = {}
         self._jobfile_name = 'jobfile'
         self._testfile_name = '.fio_testmark'
+        self.blocksize = {'seq': '1m', 'rnd': '4k'}
         self.config = configparser.ConfigParser(allow_no_value=True)
         self.config.read_dict({
             'global': {
                 'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
+                'filename': self._testfile_name,
+                'directory': args.target,
+                'size': args.size,
+                'direct': '1',
+                # borrowed configuration from shell version
                 'runtime': '25',
                 'ramp_time': '5',
-                'size': size,
-                'filename': self._testfile_name,
-                'directory': directory,
-                'direct': '1',
                 'refill_buffers': None,
                 'norandommap': None,
                 'randrepeat': '0',
@@ -72,11 +75,9 @@ class Job:
                 self.config.write(f, space_around_delimiters=False)
 
     def create_job(self, rw_type, queue_size, thread_num):
-        if rw_type == 'seq':
-            blocksize = '1m' 
-        elif rw_type == 'rnd':
-            blocksize = '4k'
-        else:
+        try:
+            blocksize = self.blocksize[rw_type]
+        except KeyError:
             logging.error("Job rw type only accepts \"seq\" and \"rnd\"")
             exit(1)
 
@@ -171,55 +172,55 @@ class Job:
 
 def get_parser():
     parser = argparse.ArgumentParser(
-            formatter_class=argparse.RawDescriptionHelpFormatter,
-            description='A python script to show disk test results with fio',
-            epilog='''
-Note:
-    Do not add argument <target> after -x (as in \"fio-cdm -x <target>\"), \
-it will be regarded as <mix> but an error will pop up since -x optionally \
-needs a number.
-
-Examples:
-    Set test file size to 512MB, run 5 times with read, write and mix tests \
-(specify the mix percentage to be 60%):
-        fio-cdm -s 512m -n 5 -x 60
-
-    Manually add jobs:
-        fio-cdm -a seq,1,1 seq,32,1 rnd,16,8
-
-    Show the equivalent command directly with fio:
-        fio-cdm -f - | fio --showcmd -
-''')
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='A python script to show disk test results with fio',
+        epilog=
+            'Note:\n'
+            '    Do not add argument <target> right after -x (as in \"fio-cdm -x <target>\").\n\n'
+            'Examples:\n'
+            '    Set test file size to 512MB, 5 test runs with read, write and mix tests:\n'
+            '        fio-cdm -s 512m -n 5 -x\n\n'
+            '    Manually add jobs to replace the default ones:\n'
+            '        fio-cdm -a seq,1,1 seq,32,1 rnd,16,8\n\n'
+            '    Show the equivalent command directly with fio (without running the test):\n'
+            '        fio-cdm -f - | fio --showcmd -\n'
+        )
 
     parser.add_argument('target', nargs='?', default='.',
                         help='The path of the directory to test, default to current directory.')
     parser.add_argument('-n', metavar='number', dest='number', type=int, default=1,
-                        help='''Number of tests, default is 1''')
+                        help='Number of tests, default is 1.')
     parser.add_argument('-s', metavar='size', dest='size', default='1G',
-                        help='''The size of file I/O, same as the fio parameter, default is 1G''')
+                        help='The size of file I/O, same as the fio parameter, default is 1G.')
     parser.add_argument('-x', metavar='mix', dest='mix', type=float, nargs="?", const=70, default=0,
-                        help='''Add mixed rw test, default is disabled. <mix> is read percentage, default is 70.''')
-    parser.add_argument('-a', metavar='job', dest='jobs', nargs="+",
-                        help='''Manually add multiple jobs. Override default. Format is \"seq|rnd,queue depth,thread number\".''')
-    parser.add_argument('-f', metavar='dump-jobfile', dest='dump_jobfile',
-                        help='''Save jobfile and quit without running fio. Use \'-\' to print to stdout.''')
+                        help='Add mixed rw test, default is disabled. <mix> is read percentage, default is 70 if not specified.')
     parser.add_argument('-0', dest='zero_buffers', action='store_true',
                         help='Initialize buffers with zeros instead of random data')
+    parser.add_argument('-a', metavar='job', dest='jobs', nargs="+",
+                        help='Manually add multiple jobs. Override default. Format is \"seq|rnd,<queue depth>,<thread number>\".')
+    parser.add_argument('-f', metavar='dump-jobfile', dest='dump_jobfile',
+                        help='Save jobfile and quit without running fio. Use \'-\' to print to stdout.')
     # hidden option, enable to show debug information
     parser.add_argument('-g', dest='debug', action='store_true', help=argparse.SUPPRESS)
     return parser
 
 
 if __name__ == '__main__':
-    # TODO: realtime visual feedback, with fio --debug=io, hard
+    # TODO: real-time visual feedback, with fio --debug=io, hard
     # TODO: time upper limit do this with 'runtime'
+    # TODO: interval time
+    # TODO: vendor and model with lsblk -o +VENDOR,MODEL or /sys/block/*/device/{vendor,model}
+    # TODO: print summary
+    # TODO: possibly specify block size in args?
+    # TODO: windows specify device
+    # Unit of I/O speed, use MB/s(10^6) instead of MiB/s(2^30).
     parser = get_parser()
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format="%(message)s")
 
     logging.debug(args)
 
-    fio_job = Job(args.size, args.target)
+    fio_job = Job()
     if args.jobs:
         for job in args.jobs:
             rw_type, qd, tn = job.split(',')
