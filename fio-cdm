@@ -118,8 +118,8 @@ class Job:
             logging.info('interrupted, cleaning up before exit...')
             exit()
         finally:
-            if os.path.exists(os.path.join(args.target, self._jobfile_name)):
-                os.remove(os.path.join(args.target, self._jobfile_name))
+            if os.path.exists(self._jobfile_name):
+                os.remove(self._jobfile_name)
             if os.path.exists(os.path.join(args.target, self._testfile_name)):
                 os.remove(os.path.join(args.target, self._testfile_name))
 
