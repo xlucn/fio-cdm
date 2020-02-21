@@ -52,6 +52,8 @@ class Job:
                 'group_reporting': None
             }
         })
+        if args.zero_buffers:
+            self.config.read_dict({ 'global': { 'zero_buffers': None } })
         # Windows does not support pthread mutexes
         if os.name == 'nt':
             self.config.read_dict({ 'global': { 'thread': None } })
@@ -202,6 +204,8 @@ Examples:
                         help='''Manually add multiple jobs. Override default. Format is \"seq|rnd,queue depth,thread number\".''')
     parser.add_argument('-f', metavar='dump-jobfile', dest='dump_jobfile',
                         help='''Save jobfile and quit without running fio. Use \'-\' to print to stdout.''')
+    parser.add_argument('-0', dest='zero_buffers', action='store_true',
+                        help='Initialize buffers with zeros instead of random data')
     # hidden option, enable to show debug information
     parser.add_argument('-g', dest='debug', action='store_true', help=argparse.SUPPRESS)
     return parser
