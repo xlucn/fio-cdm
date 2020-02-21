@@ -62,7 +62,7 @@ class Job:
             self.config.read_dict({ 'global': { 'thread': None } })
 
     def _jobname_templ(self, job):
-        return "{}-{{rw}}-{}-Q{}-T{}".format(job["rw"].title(), job["bs"], job["q"], job["t"])
+        return "{}-{{rw}}-{}-q{}-t{}".format(job["rw"], job["bs"], job["q"], job["t"])
 
     def _displayname(self, job):
         return "{}{} Q{:2}T{:2}".format(job["rw"], job["bs"], str(job["q"]), str(job["t"])).upper()
@@ -84,16 +84,16 @@ class Job:
         job = {"rw": rw_type, "bs": blocksize, "q": queue_size, "t": thread_num}
         self.jobs.append(job)
 
-        if args.mix == 0:
-            rw_name_type = [("Read","read"), ("Write", "write")]
-        else:
-            rw_name_type = [("Read","read"), ("Write", "write"), ("Mix", "rw")]
+        rw_types = ["read", "write"]
+        if args.mix:
+            rw_types.append("rw")
 
-        for name, rw in rw_name_type:
+        # TODO: nameing for seq/rnd and r/w/x
+        for rw in rw_types:
             self.config.read_dict({
-                self._jobname_templ(job).format(rw=name): {
-                    'bs': blocksize,
+                self._jobname_templ(job).format(rw=rw): {
                     'rw': rw if rw_type == 'seq' else 'rand' + rw,
+                    'bs': blocksize,
                     'rwmixread': args.mix,
                     'iodepth': queue_size,
                     'numjobs': thread_num,
