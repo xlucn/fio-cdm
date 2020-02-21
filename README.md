@@ -2,7 +2,7 @@
 
 WIP
 
-A python script to generate CrystalDiskMark-style test result with [fio](https://github.com/axboe/fio). Should work across multi platforms as long as you have `fio` and `python`.
+A python script to generate [CrystalDiskMark](https://crystalmark.info/en/software/crystaldiskmark/)-style test result with [fio](https://github.com/axboe/fio). Should work across multi platforms as long as you have `fio` and `python` (need version 3.3 and above).
 
 ## Usage
 

@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import shutil
 import argparse
 import logging
 import configparser
@@ -155,8 +156,7 @@ class Job:
             ))
 
     def _check_disk_space(self):
-        statvfs = os.statvfs(args.target)
-        avail = statvfs.f_frsize * statvfs.f_bfree
+        avail = shutil.disk_usage(args.target).free
         needed = readable2byte(args.size)
 
         if avail > needed:
