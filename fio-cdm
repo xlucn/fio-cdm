@@ -8,8 +8,6 @@ import logging
 import configparser
 import subprocess
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"), format="%(message)s")
-
 
 def readable2byte(num):
     units = {'k': 1, 'm': 2, 'g': 3, 't': 4}
@@ -204,6 +202,8 @@ Examples:
                         help='''Manually add multiple jobs. Override default. Format is \"seq|rnd,queue depth,thread number\".''')
     parser.add_argument('-f', metavar='dump-jobfile', dest='dump_jobfile',
                         help='''Save jobfile and quit without running fio. Use \'-\' to print to stdout.''')
+    # hidden option, enable to show debug information
+    parser.add_argument('-g', dest='debug', action='store_true', help=argparse.SUPPRESS)
     return parser
 
 
@@ -213,6 +213,8 @@ if __name__ == '__main__':
     # TODO: show iops or latency
     parser = get_parser()
     args = parser.parse_args()
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format="%(message)s")
+
     logging.debug(args)
 
     fio_job = Job(args.size, args.target)
