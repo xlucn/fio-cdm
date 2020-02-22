@@ -103,6 +103,8 @@ class Job:
             })
 
     def run(self):
+        print("tests: {}, size: {}, target: {}".format(args.number, args.size, args.target))
+
         if not self._check_disk_space():
             exit(1)
 
@@ -159,14 +161,15 @@ class Job:
                 _print_result_line(job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
 
     def _check_disk_space(self):
-        avail = shutil.disk_usage(args.target).free
+        du = shutil.disk_usage(args.target)
         needed = readable2byte(args.size)
+        print("{}/{}".format(byte2readable(du.used), byte2readable(du.total)))
 
-        if avail > needed:
+        if du.free > needed:
             return True
         else:
             logging.warning("Not enough space available in %s:", args.target)
-            logging.warning("Needed: %s. Available: %s", byte2readable(needed), byte2readable(avail))
+            logging.warning("Needed: %s. Available: %s", byte2readable(needed), byte2readable(du.free))
             return False
 
 
