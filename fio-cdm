@@ -178,8 +178,6 @@ def get_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='A python script to show disk test results with fio',
         epilog=
-            'Note:\n'
-            '    Do not add argument <target> right after -x (as in \"fio-cdm -x <target>\").\n\n'
             'Examples:\n'
             '    Set test file size to 512MB, 5 test runs with read, write and mix tests:\n'
             '        fio-cdm -s 512m -n 5 -x\n\n'
@@ -191,8 +189,8 @@ def get_parser():
 
     parser.add_argument('target', nargs='?', default='.',
                         help='The path of the directory to test, default to current directory.')
-    parser.add_argument('-n', metavar='number', dest='number', type=int, default=1,
-                        help='Number of tests, default is 1.')
+    parser.add_argument('-n', metavar='number', dest='number', type=int, default=5,
+                        help='Number of tests, default is 5.')
     parser.add_argument('-s', metavar='size', dest='size', default='1G',
                         help='The size of file I/O, same as the fio parameter, default is 1G.')
     parser.add_argument('-x', metavar='mix', dest='mix', type=float, nargs="?", const=70, default=0,
