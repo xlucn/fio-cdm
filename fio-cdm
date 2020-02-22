@@ -42,7 +42,8 @@ class Job:
             'global': {
                 'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
                 'filename': self._testfile_name,
-                'directory': args.target,
+                # Escape colon in disk label on Windows
+                'directory': os.path.realpath(args.target).replace(':', '\:'),
                 'size': args.size,
                 'direct': '1',
                 # borrowed configuration from shell version
