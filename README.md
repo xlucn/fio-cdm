@@ -8,8 +8,8 @@ A python script to generate [CrystalDiskMark](https://crystalmark.info/en/softwa
 
 - Using Python
 - Try to provide some options of CrystalDiskMark, e.g., number of test runs, test file size, mixed r/w tests, zero buffers, etc
-- Show IOPS and latency results for random read/write tests (combining the default, peak performance and real world performance in CrystalDiskMark 7.0.0)
-- Easier to add/customize new tests in command-line arguments
+- Show IOPS and latency results for random read/write tests (thus combining the default, peak performance and real world performance tests in CrystalDiskMark 7.0.0)
+- Easy to add/customize new tests in command-line arguments
 - Parse `fio` result in json format to achieve more stability
 
 ## Usage
@@ -35,16 +35,18 @@ optional arguments:
 
 ### Sample output
 
+The default tests are same as [CrystalDiskMark 7.0.0](https://crystalmark.info/en/software/crystaldiskmark/crystaldiskmark-main-menu/)
+
 ```
 |Name        | Read(MB/s)|Write(MB/s)|
 |------------|-----------|-----------|
 |SEQ1M Q8 T1 |    3076.62|    1605.00|
 |SEQ1M Q1 T1 |    2084.94|    1392.66|
 |RND4K Q32T16|    1780.82|     465.35|
-|...    IOPS |  434665.02|  113591.83|
+|... IOPS    |  434665.02|  113591.83|
 |... latency |    1159.69|    4476.99|
 |RND4K Q1 T1 |      48.27|     178.48|
-|...    IOPS |   11784.71|   43574.09|
+|... IOPS    |   11784.71|   43574.09|
 |... latency |      83.94|      21.38|
 ```
 
@@ -64,7 +66,7 @@ Show the equivalent command directly with fio (without running the test):
 
 ### Note
 
-Do not add argument `<target>` right after -x (as in `fio-cdm -x <target>`).
+Do not add argument `<target>` right after `-x` or `-a` (as in `fio-cdm -x <target>`).
 
 ## Similar projects
 
