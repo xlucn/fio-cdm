@@ -10,9 +10,9 @@ import subprocess
 
 
 def readable2byte(num):
-    """[K|M|G|T](i)B -> byte, regard the multiply as 1024"""
-    units = {'k': 1, 'm': 2, 'g': 3, 't': 4}
     num = num.lower().rstrip("b").rstrip("i")
+
+    units = {'k': 1, 'm': 2, 'g': 3, 't': 4}
     if num[-1] in units.keys():
         return int(num[:-1]) * 1024 ** units[num[-1]]
     elif num[-1].isdigit():
@@ -23,7 +23,6 @@ def readable2byte(num):
 
 
 def byte2readable(num):
-    """byte -> [K|M|G|T]iB"""
     for unit in ['', 'Ki', 'Mi', 'Gi']:
         if abs(num) < 1024.0:
             return "%3.1f%sB" % (num, unit)
@@ -33,12 +32,12 @@ def byte2readable(num):
 
 class Job:
     def __init__(self):
-        self.jobs = []
+        self._jobs = []
         self._jobfile_name = 'jobfile'
         self._testfile_name = '.fio_testmark'
-        self.blocksize = {'seq': '1m', 'rnd': '4k'}
-        self.config = configparser.ConfigParser(allow_no_value=True)
-        self.config.read_dict({
+        self._blocksize = {'seq': '1m', 'rnd': '4k'}
+        self._config = configparser.ConfigParser(allow_no_value=True)
+        self._config.read_dict({
             'global': {
                 'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
                 'filename': self._testfile_name,
@@ -57,33 +56,33 @@ class Job:
             }
         })
         if args.zero_buffers:
-            self.config.read_dict({ 'global': { 'zero_buffers': None } })
+            self._config.read_dict({ 'global': { 'zero_buffers': None } })
         # Windows does not support pthread mutexes
         if os.name == 'nt':
-            self.config.read_dict({ 'global': { 'thread': None } })
+            self._config.read_dict({ 'global': { 'thread': None } })
 
     def _jobname_templ(self, job):
         return "{}-{{rw}}-{}-q{}-t{}".format(job["rw"], job["bs"], job["q"], job["t"])
 
     def _displayname(self, job):
-        return "{}{} Q{:2}T{:2}".format(job["rw"], job["bs"], str(job["q"]), str(job["t"])).upper()
+        return "{}{} Q{:<2}T{:<2}".format(job["rw"], job["bs"], job["q"], job["t"]).upper()
 
     def _create_jobfile(self, jobfile):
         if jobfile == '-':
-            self.config.write(sys.stdout, space_around_delimiters=False)
+            self._config.write(sys.stdout, space_around_delimiters=False)
         else:
             with open(jobfile, 'w') as f:
-                self.config.write(f, space_around_delimiters=False)
+                self._config.write(f, space_around_delimiters=False)
 
     def create_job(self, rw_type, queue_size, thread_num):
         try:
-            blocksize = self.blocksize[rw_type]
+            blocksize = self._blocksize[rw_type]
         except KeyError:
             logging.error("Job rw type only accepts \"seq\" and \"rnd\"")
             exit(1)
 
         job = {"rw": rw_type, "bs": blocksize, "q": queue_size, "t": thread_num}
-        self.jobs.append(job)
+        self._jobs.append(job)
 
         rw_types = ["read", "write"]
         if args.mix:
@@ -91,7 +90,7 @@ class Job:
 
         # TODO: nameing for seq/rnd and r/w/x
         for rw in rw_types:
-            self.config.read_dict({
+            self._config.read_dict({
                 self._jobname_templ(job).format(rw=rw): {
                     'rw': rw if rw_type == 'seq' else 'rand' + rw,
                     'bs': blocksize,
@@ -153,7 +152,7 @@ class Job:
                   "|------------|-----------|-----------|")
             template_row = "|{jobname}|{read:11.2f}|{write:11.2f}|"
 
-        for job in self.jobs:
+        for job in self._jobs:
             _print_result_line(job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
             if job['rw'] == 'rnd':
                 _print_result_line(job, "... IOPS    ", lambda d: d['iops'])
@@ -207,13 +206,10 @@ def get_parser():
 
 
 if __name__ == '__main__':
-    # TODO: real-time visual feedback, with fio --debug=io, hard
-    # TODO: time upper limit do this with 'runtime'
-    # TODO: interval time
-    # TODO: vendor and model with lsblk -o +VENDOR,MODEL or /sys/block/*/device/{vendor,model}
-    # TODO: print summary
-    # TODO: possibly specify block size in args?
-    # TODO: windows specify device
+    # TODO: Real-time visual feedback, with fio --debug=io? Seams hard.
+    # TODO: Linux: vendor and model with lsblk -o +VENDOR,MODEL or /sys/block/*/device/{vendor,model}
+    # TODO: Windows path problem
+    # TODO: Specify device instead of directory
     # Unit of I/O speed, use MB/s(10^6) instead of MiB/s(2^30).
     parser = get_parser()
     args = parser.parse_args()
