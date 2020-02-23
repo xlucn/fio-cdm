@@ -57,15 +57,15 @@ class Job:
         })
         if args.zero_buffers:
             self._config.read_dict({ 'global': { 'zero_buffers': None } })
-        # Windows does not support pthread mutexes
+        # Windows does not support pthread mutexes, suppress the warning
         if os.name == 'nt':
             self._config.read_dict({ 'global': { 'thread': None } })
 
     def _jobname_templ(self, job):
-        return "{}-{{rw}}-{}-q{}-t{}".format(job["rw"], job["bs"], job["q"], job["t"])
+        return "{}-{{rw}}-{}-q{}-t{}".format(job["rnd"], job["bs"], job["q"], job["t"])
 
     def _displayname(self, job):
-        return "{}{} Q{:<2}T{:<2}".format(job["rw"], job["bs"], job["q"], job["t"]).upper()
+        return "{}{} Q{:<2}T{:<2}".format(job["rnd"], job["bs"], job["q"], job["t"]).upper()
 
     def _create_jobfile(self, jobfile):
         if jobfile == '-':
@@ -74,14 +74,14 @@ class Job:
             with open(jobfile, 'w') as f:
                 self._config.write(f, space_around_delimiters=False)
 
-    def create_job(self, rw_type, queue_size, thread_num):
+    def create_job(self, rnd_type, queue_size, thread_num):
         try:
-            blocksize = self._blocksize[rw_type]
+            blocksize = self._blocksize[rnd_type]
         except KeyError:
-            logging.error("Job rw type only accepts \"seq\" and \"rnd\"")
+            logging.error("Job type only accepts \"seq\" and \"rnd\"")
             exit(1)
 
-        job = {"rw": rw_type, "bs": blocksize, "q": queue_size, "t": thread_num}
+        job = {"rnd": rnd_type, "bs": blocksize, "q": queue_size, "t": thread_num}
         self._jobs.append(job)
 
         rw_types = ["read", "write"]
@@ -92,7 +92,7 @@ class Job:
         for rw in rw_types:
             self._config.read_dict({
                 self._jobname_templ(job).format(rw=rw): {
-                    'rw': rw if rw_type == 'seq' else 'rand' + rw,
+                    'rw': rw if rnd_type == 'seq' else 'rand' + rw,
                     'bs': blocksize,
                     'rwmixread': args.mix,
                     'iodepth': queue_size,
@@ -156,7 +156,7 @@ class Job:
 
         for job in self._jobs:
             _print_result_line(job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
-            if job['rw'] == 'rnd':
+            if job['rnd'] == 'rnd':
                 _print_result_line(job, "... IOPS    ", lambda d: d['iops'])
                 _print_result_line(job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
 
@@ -209,7 +209,6 @@ def get_parser():
 if __name__ == '__main__':
     # TODO: Real-time visual feedback, with fio --debug=io? Seams hard.
     # TODO: Linux: vendor and model with lsblk -o +VENDOR,MODEL or /sys/block/*/device/{vendor,model}
-    # TODO: Windows path problem
     # TODO: Specify device instead of directory
     # Unit of I/O speed, use MB/s(10^6) instead of MiB/s(2^30).
     parser = get_parser()
@@ -221,8 +220,8 @@ if __name__ == '__main__':
     fio_job = Job()
     if args.jobs:
         for job in args.jobs:
-            rw_type, qd, tn = job.split(',')
-            fio_job.create_job(rw_type, int(qd), int(tn))
+            rnd_type, qd, tn = job.split(',')
+            fio_job.create_job(rnd_type, int(qd), int(tn))
     else:
         fio_job.create_job('seq',  8,  1)
         fio_job.create_job('seq',  1,  1)
