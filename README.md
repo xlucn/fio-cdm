@@ -15,8 +15,7 @@ A python script to generate [CrystalDiskMark](https://crystalmark.info/en/softwa
 ## Usage
 
 ```
-usage: fio-cdm [-h] [-n number] [-s size] [-x [mix]] [-0] [-a job [job ...]]
-               [-f dump-jobfile] [target]
+usage: fio-cdm [target] [-h] [-n number] [-s size] [-x [mix]] [-0] [-a job [job ...]] [-f dump-jobfile]
 
 positional arguments:
   target            The path of the directory to test, default to current directory.
@@ -66,7 +65,7 @@ Show the equivalent command directly with fio (without running the test):
 
 ### Note
 
-Do not add argument `<target>` right after `-x` or `-a` (as in `fio-cdm -x <target>`).
+Recommend to put the `<target>` argument as the first one since some of the optional arguments will consume it. See [this bug of Python](https://bugs.python.org/issue9338).
 
 ## Similar projects
 
