@@ -88,7 +88,6 @@ class Job:
         if args.mix:
             rw_types.append("rw")
 
-        # TODO: nameing for seq/rnd and r/w/x
         for rw in rw_types:
             self._config.read_dict({
                 self._jobname_templ(job).format(rw=rw): {
@@ -103,7 +102,7 @@ class Job:
             })
 
     def run(self):
-        print("tests: {}, size: {}, target: {}".format(args.number, args.size, args.target))
+        print("tests: {}, size: {}, target: {}".format(args.number, args.size, os.path.realpath(args.target)), end=" ")
 
         if not self._check_disk_space():
             exit(1)
