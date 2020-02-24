@@ -1,16 +1,21 @@
 # fio-cdm
 
-WIP
+A python script to generate [CrystalDiskMark](https://crystalmark.info/en/software/crystaldiskmark/)-style test result with [fio](https://github.com/axboe/fio). Should work across multi platforms as long as you have `fio` and `python` (need version 3.3 and above) in case you want to compare the results with CrystalDiskMark.
 
-A python script to generate [CrystalDiskMark](https://crystalmark.info/en/software/crystaldiskmark/)-style test result with [fio](https://github.com/axboe/fio). Should work across multi platforms as long as you have `fio` and `python` (need version 3.3 and above).
+This is still WIP. I am a novice python coder and not familiar with fio, so the test result is expected to be imprecise. Correction and advices are welcome.
 
 ## Feature
 
 - Using Python
 - Try to provide some options of CrystalDiskMark, e.g., number of test runs, test file size, mixed r/w tests, zero buffers, etc
-- Show IOPS and latency results for random read/write tests (thus combining the default, peak performance and real world performance tests in CrystalDiskMark 7.0.0)
+- Show IOPS and latency results for random read/write tests.
+  This actually combines the "default", "peak performance" and "real world performance" tests in CrystalDiskMark 7.0.0
 - Easy to add/customize new tests in command-line arguments
 - Parse `fio` result in json format to achieve more stability
+
+TODO
+
+See `grep TODO fio-cdm`
 
 ## Usage
 
@@ -37,16 +42,17 @@ optional arguments:
 The default tests are same as [CrystalDiskMark 7.0.0](https://crystalmark.info/en/software/crystaldiskmark/crystaldiskmark-main-menu/)
 
 ```
-|Name        | Read(MB/s)|Write(MB/s)|
-|------------|-----------|-----------|
-|SEQ1M Q8 T1 |    3076.62|    1605.00|
-|SEQ1M Q1 T1 |    2084.94|    1392.66|
-|RND4K Q32T16|    1780.82|     465.35|
-|... IOPS    |  434665.02|  113591.83|
-|... latency |    1159.69|    4476.99|
-|RND4K Q1 T1 |      48.27|     178.48|
-|... IOPS    |   11784.71|   43574.09|
-|... latency |      83.94|      21.38|
+tests: 5, size: 1G, target: . 173.3GiB/405.1GiB
+|Name        | Read(MB/s)|Write(MB/s)|  Mix(MB/s)|
+|------------|-----------|-----------|-----------|
+|SEQ1M Q8 T1 |    2997.60|    2056.19|    1438.19|
+|SEQ1M Q1 T1 |    1986.94|    1461.67|     941.04|
+|RND4K Q32T16|    1816.04|     456.98|     434.18|
+|... IOPS    |  443350.17|  111546.75|  105987.62|
+|... latency |    1153.89|    4587.90|    2800.43|
+|RND4K Q1 T1 |      54.20|     164.86|      34.43|
+|... IOPS    |   13232.15|   40248.87|    8405.20|
+|... latency |      74.76|      23.04|      67.78|
 ```
 
 ### Examples
