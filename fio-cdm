@@ -155,7 +155,7 @@ class Job:
 
         for job in self._jobs:
             _print_result_line(job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
-            if job['rnd'] == 'rnd':
+            if job['rnd'] == 'rnd' and args.extra_info:
                 _print_result_line(job, "... IOPS    ", lambda d: d['iops'])
                 _print_result_line(job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
 
@@ -188,6 +188,8 @@ def get_parser():
 
     parser.add_argument('target', nargs='?', default='.',
                         help='The path of the directory to test, default to current directory.')
+    parser.add_argument('-E', dest='extra_info', action='store_false',
+                        help='Disable extra information (iops and latency) for random IO tests.')
     parser.add_argument('-n', metavar='number', dest='number', type=int, default=5,
                         help='Number of tests, default is 5.')
     parser.add_argument('-s', metavar='size', dest='size', default='1G',
