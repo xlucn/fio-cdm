@@ -20,21 +20,21 @@ See `grep TODO fio-cdm`
 ## Usage
 
 ```
-usage: fio-cdm [target] [-h] [-n number] [-s size] [-x [mix]] [-0] [-a job [job ...]] [-f dump-jobfile]
+usage: fio-cdm [target] [-0] [-a job] [-E] [-f jobfile] [-n number] [-s size] [-x [mix]]
 
 positional arguments:
-  target            The path of the directory to test, default to current directory.
+  target      The path of the directory to test, default to current directory.
 
 optional arguments:
-  -n number         Number of tests, default is 5.
-  -s size           The size of file I/O, same as the fio parameter, default is 1G.
-  -x [mix]          Add mixed rw test, default is disabled. <mix> is read percentage,
-                    default is 70 if not specified.
-  -0                Initialize buffers with zeros instead of random data
-  -a job [job ...]  Manually add multiple jobs. Override default. Format is
-                    "seq|rnd,<queue depth>,<thread number>".
-  -f dump-jobfile   Save jobfile and quit without running fio. Use '-' to print to
-                    stdout.
+  -0          Initialize buffers with zeros instead of random data
+  -a job      Manually add multiple jobs. Override default. Format is "seq|rnd,<queue depth>,<thread number>".
+              This option can be used more than once.
+  -E          Disable extra information (iops and latency) for random IO tests.
+  -f jobfile  Save jobfile and quit without running fio. Use '-' to print to stdout.
+  -n number   Number of tests, default is 5.
+  -s size     The size of file I/O, same as the fio parameter, default is 1G.
+  -x [mix]    Add mixed rw test, default is disabled.
+              <mix> is read percentage, default is 70 if not specified.
 ```
 
 ### Sample output
@@ -63,7 +63,7 @@ Set test file size to 512MB, 5 test runs with read, write and mix tests:
 
 Manually add jobs to replace the default ones:
 
-    fio-cdm -a seq,1,1 seq,32,1 rnd,16,8
+    fio-cdm -a seq,1,1 -a seq,32,1 -a rnd,16,8
 
 Show the equivalent command directly with fio (without running the test):
 
