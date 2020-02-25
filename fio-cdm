@@ -84,11 +84,7 @@ class Job:
         job = {"rnd": rnd_type, "bs": blocksize, "q": queue_size, "t": thread_num}
         self._jobs.append(job)
 
-        rw_types = ["read", "write"]
-        if args.mix:
-            rw_types.append("rw")
-
-        for rw in rw_types:
+        for rw in ["read", "write", "rw"] if args.mix else ["read", "write"]:
             self._config.read_dict({
                 self._jobname_templ(job).format(rw=rw): {
                     'rw': rw if rnd_type == 'seq' else 'rand' + rw,
@@ -125,6 +121,7 @@ class Job:
                 os.remove(os.path.join(args.target, self._testfile_name))
 
         fio_output = json.loads(output)
+        # rearrange to make jobname as keys
         info = {job.pop("jobname"): job for job in fio_output["jobs"]}
         logging.debug(info)
 
@@ -133,9 +130,9 @@ class Job:
     def _print_result(self, info):
         def _print_result_line(job, name, f):
             jobname_templ = self._jobname_templ(job)
-            read=info.get(jobname_templ.format(rw="read"))
-            write=info.get(jobname_templ.format(rw="write"))
-            mix=info.get(jobname_templ.format(rw="rw"))
+            read = info.get(jobname_templ.format(rw="read"))
+            write = info.get(jobname_templ.format(rw="write"))
+            mix = info.get(jobname_templ.format(rw="rw"))
             print(template_row.format(
                 jobname=name,
                 read=f(read['read']),
@@ -173,35 +170,23 @@ class Job:
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description='A python script to show disk test results with fio',
-        epilog=
-            'Examples:\n'
-            '    Set test file size to 512MB, 5 test runs with read, write and mix tests:\n'
-            '        fio-cdm -s 512m -n 5 -x\n\n'
-            '    Manually add jobs to replace the default ones:\n'
-            '        fio-cdm -a seq,1,1 seq,32,1 rnd,16,8\n\n'
-            '    Show the equivalent command directly with fio (without running the test):\n'
-            '        fio-cdm -f - | fio --showcmd -\n'
-        )
-
+    parser = argparse.ArgumentParser( description='A python script to show disk test results with fio')
     parser.add_argument('target', nargs='?', default='.',
                         help='The path of the directory to test, default to current directory.')
+    parser.add_argument('-0', dest='zero_buffers', action='store_true',
+                        help='Initialize buffers with zeros instead of random data')
+    parser.add_argument('-a', metavar='job', dest='jobs', action="append",
+                        help='Manually add multiple jobs. Override default. Format is \"seq|rnd,<queue depth>,<thread number>\". This option can be used more than once.')
     parser.add_argument('-E', dest='extra_info', action='store_false',
                         help='Disable extra information (iops and latency) for random IO tests.')
+    parser.add_argument('-f', metavar='jobfile', dest='dump_jobfile',
+                        help='Save jobfile and quit without running fio. Use \'-\' to print to stdout.')
     parser.add_argument('-n', metavar='number', dest='number', type=int, default=5,
                         help='Number of tests, default is 5.')
     parser.add_argument('-s', metavar='size', dest='size', default='1G',
                         help='The size of file I/O, same as the fio parameter, default is 1G.')
     parser.add_argument('-x', metavar='mix', dest='mix', type=float, nargs="?", const=70, default=0,
                         help='Add mixed rw test, default is disabled. <mix> is read percentage, default is 70 if not specified.')
-    parser.add_argument('-0', dest='zero_buffers', action='store_true',
-                        help='Initialize buffers with zeros instead of random data')
-    parser.add_argument('-a', metavar='job', dest='jobs', nargs="+",
-                        help='Manually add multiple jobs. Override default. Format is \"seq|rnd,<queue depth>,<thread number>\".')
-    parser.add_argument('-f', metavar='dump-jobfile', dest='dump_jobfile',
-                        help='Save jobfile and quit without running fio. Use \'-\' to print to stdout.')
     # hidden option, enable to show debug information
     parser.add_argument('-g', dest='debug', action='store_true', help=argparse.SUPPRESS)
     return parser
