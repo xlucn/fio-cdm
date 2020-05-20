@@ -42,7 +42,7 @@ class Job:
                 'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
                 'filename': self._testfile_name,
                 # Escape colon in disk label on Windows
-                'directory': os.path.realpath(args.target).replace(':', '\:'),
+                'directory': os.path.realpath(args.target).replace(':', '\\:'),
                 'size': args.size,
                 'direct': '1',
                 # borrowed configuration from shell version
