@@ -98,16 +98,17 @@ class Job:
             })
 
     def run(self):
-        print("tests: {}, size: {}, target: {}".format(args.number, args.size, os.path.realpath(args.target)), end=" ")
-
-        if not self._check_disk_space():
-            exit(1)
-
         if args.dump_jobfile:
             self._create_jobfile(args.dump_jobfile)
             exit()
         else:
             self._create_jobfile(self._jobfile_name)
+
+        print("tests: {}, size: {}, target: {}".format(
+            args.number, args.size, os.path.realpath(args.target)), end=" ")
+
+        if not self._check_disk_space():
+            exit(1)
 
         try:
             output = subprocess.check_output(['fio', '--output-format', 'json', self._jobfile_name])
