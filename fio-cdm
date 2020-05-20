@@ -193,9 +193,7 @@ class Job:
 def get_parser():
     parser = argparse.ArgumentParser(
         description='A python script to show disk test results with fio')
-    parser.add_argument('target', nargs='?', default='.',
-                        help='The path of the directory to test. '
-                             'Default to current directory.')
+    parser.add_argument('target', help='The path of the directory to test.')
     parser.add_argument('-0', dest='zero_buffers', action='store_true',
                         help='Initialize buffers with zeros. '
                              'Default to use random buffers.')
