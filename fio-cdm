@@ -9,8 +9,8 @@ import configparser
 import subprocess
 
 
-def readable2byte(num):
-    num = num.lower().rstrip("b").rstrip("i")
+def readable2byte(raw):
+    num = raw.lower().rstrip("b").rstrip("i")
 
     units = {'k': 1, 'm': 2, 'g': 3, 't': 4}
     if num[-1] in units.keys():
@@ -18,7 +18,7 @@ def readable2byte(num):
     elif num[-1].isdigit():
         return int(num)
     else:
-        logging.error("Unrecognised size: %s(i)B. Largest unit available is TiB", num.upper())
+        logging.error("Unrecognised size: %s. Largest unit allowed is TB", raw)
         exit(1)
 
 
@@ -56,16 +56,22 @@ class Job:
             }
         })
         if args.zero_buffers:
-            self._config.read_dict({ 'global': { 'zero_buffers': None } })
+            self._config.read_dict({'global': {'zero_buffers': None}})
         # Windows does not support pthread mutexes, suppress the warning
         if os.name == 'nt':
-            self._config.read_dict({ 'global': { 'thread': None } })
+            self._config.read_dict({'global': {'thread': None}})
 
     def _jobname_templ(self, job):
-        return "{}-{{rw}}-{}-q{}-t{}".format(job["rnd"], job["bs"], job["q"], job["t"])
+        return "{}-{{rw}}-{}-q{}-t{}".format(job["rnd"],
+                                             job["bs"],
+                                             job["q"],
+                                             job["t"])
 
     def _displayname(self, job):
-        return "{}{} Q{:<2}T{:<2}".format(job["rnd"], job["bs"], job["q"], job["t"]).upper()
+        return "{}{} Q{:<2}T{:<2}".format(job["rnd"],
+                                          job["bs"],
+                                          job["q"],
+                                          job["t"]).upper()
 
     def _create_jobfile(self, jobfile):
         if jobfile == '-':
@@ -81,7 +87,12 @@ class Job:
             logging.error("Job type only accepts \"seq\" and \"rnd\"")
             exit(1)
 
-        job = {"rnd": rnd_type, "bs": blocksize, "q": queue_size, "t": thread_num}
+        job = {
+            "rnd": rnd_type,
+            "bs": blocksize,
+            "q": queue_size,
+            "t": thread_num
+        }
         self._jobs.append(job)
 
         for rw in ["read", "write", "rw"] if args.mix else ["read", "write"]:
@@ -111,7 +122,8 @@ class Job:
             exit(1)
 
         try:
-            output = subprocess.check_output(['fio', '--output-format', 'json', self._jobfile_name])
+            output = subprocess.check_output(['fio', '--output-format', 'json',
+                                              self._jobfile_name])
         except KeyboardInterrupt:
             logging.info('interrupted, cleaning up before exit...')
             exit()
@@ -138,8 +150,8 @@ class Job:
                 jobname=name,
                 read=f(read['read']),
                 write=f(write['write']),
-                mix=None if args.mix == 0 else (f(mix['read']) * args.mix +
-                    f(mix['write']) * (100 - args.mix)) / 100.0
+                mix=(f(mix['write']) * (100 - args.mix) +
+                     f(mix['read']) * args.mix) / 100.0 if args.mix else None
             ))
 
         if args.mix:
@@ -152,10 +164,13 @@ class Job:
             template_row = "|{jobname}|{read:11.2f}|{write:11.2f}|"
 
         for job in self._jobs:
-            _print_result_line(job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
+            _print_result_line(job, self._displayname(job),
+                               lambda d: d['bw_bytes'] / 10**6)
             if job['rnd'] == 'rnd' and args.extra_info:
-                _print_result_line(job, "... IOPS    ", lambda d: d['iops'])
-                _print_result_line(job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
+                _print_result_line(job, "... IOPS    ",
+                                   lambda d: d['iops'])
+                _print_result_line(job, "... latency ",
+                                   lambda d: d['lat_ns']['mean'] / 1000)
 
     def _check_disk_space(self):
         du = shutil.disk_usage(args.target)
@@ -165,31 +180,48 @@ class Job:
         if du.free > needed:
             return True
         else:
-            logging.warning("Not enough space available in %s:", args.target)
-            logging.warning("Needed: %s. Available: %s", byte2readable(needed), byte2readable(du.free))
+            logging.error("Not enough space available in %s:",
+                          args.target)
+            logging.error("Needed: %s. Available: %s",
+                          byte2readable(needed),
+                          byte2readable(du.free))
             return False
 
 
 def get_parser():
-    parser = argparse.ArgumentParser( description='A python script to show disk test results with fio')
+    parser = argparse.ArgumentParser(
+        description='A python script to show disk test results with fio')
     parser.add_argument('target', nargs='?', default='.',
-                        help='The path of the directory to test, default to current directory.')
+                        help='The path of the directory to test. '
+                             'Default to current directory.')
     parser.add_argument('-0', dest='zero_buffers', action='store_true',
-                        help='Initialize buffers with zeros instead of random data')
+                        help='Initialize buffers with zeros. '
+                             'Default to use random buffers.')
     parser.add_argument('-a', metavar='job', dest='jobs', action="append",
-                        help='Manually add multiple jobs. Override default. Format is \"seq|rnd,<queue depth>,<thread number>\". This option can be used more than once.')
+                        help='Manually add multiple jobs. Format is '
+                             '"seq|rnd,<queue depth>,<thread number>". '
+                             'This overrides the preset jobs. '
+                             'This option can be used more than once.')
     parser.add_argument('-E', dest='extra_info', action='store_false',
-                        help='Disable extra information (iops and latency) for random IO tests.')
+                        help='Disable extra information (iops, latency) for '
+                             'random IO tests. Default is enabled.')
     parser.add_argument('-f', metavar='jobfile', dest='dump_jobfile',
-                        help='Save jobfile and quit without running fio. Use \'-\' to print to stdout.')
-    parser.add_argument('-n', metavar='number', dest='number', type=int, default=5,
+                        help='Save jobfile and quit without running fio. '
+                             'Use "-" to print to stdout.')
+    parser.add_argument('-n', metavar='number', dest='number',
+                        type=int, default=5,
                         help='Number of tests, default is 5.')
     parser.add_argument('-s', metavar='size', dest='size', default='1G',
-                        help='The size of file I/O, same as the fio parameter, default is 1G.')
-    parser.add_argument('-x', metavar='mix', dest='mix', type=float, nargs="?", const=70, default=0,
-                        help='Add mixed rw test, default is disabled. <mix> is read percentage, default is 70 if not specified.')
+                        help='The size of file I/O. '
+                             'It is directly passed to fio. '
+                             'Default is 1G.')
+    parser.add_argument('-x', metavar='mix', dest='mix',
+                        type=float, nargs="?", const=70, default=0,
+                        help='Add mixed rw test. Default is disabled. '
+                             '<mix> is read percentage. Default is 70.')
     # hidden option, enable to show debug information
-    parser.add_argument('-g', dest='debug', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('-g', dest='debug', action='store_true',
+                        help=argparse.SUPPRESS)
     return parser
 
 
@@ -200,7 +232,8 @@ if __name__ == '__main__':
     # Unit of I/O speed, use MB/s(10^6) instead of MiB/s(2^30).
     parser = get_parser()
     args = parser.parse_args()
-    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format="%(message)s")
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
+                        format="%(message)s")
 
     logging.debug(args)
 
