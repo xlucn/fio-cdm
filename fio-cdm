@@ -115,11 +115,13 @@ class Job:
         else:
             self._create_jobfile(self._jobfile_name)
 
-        print("tests: {}, size: {}, target: {}".format(
-            args.number, args.size, os.path.realpath(args.target)), end=" ")
-
-        if not self._check_disk_space():
-            exit(1)
+        space_info = self._check_disk_space()
+        print("tests: {}, size: {}, target: {} {}".format(
+            args.number,
+            args.size,
+            os.path.realpath(args.target),
+            space_info
+        ))
 
         try:
             output = subprocess.check_output(['fio', '--output-format', 'json',
@@ -175,17 +177,17 @@ class Job:
     def _check_disk_space(self):
         du = shutil.disk_usage(args.target)
         needed = readable2byte(args.size)
-        print("{}/{}".format(byte2readable(du.used), byte2readable(du.total)))
+        info = "{}/{}".format(byte2readable(du.used), byte2readable(du.total))
 
         if du.free > needed:
-            return True
+            return info
         else:
             logging.error("Not enough space available in %s:",
                           args.target)
             logging.error("Needed: %s. Available: %s",
                           byte2readable(needed),
                           byte2readable(du.free))
-            return False
+            exit(1)
 
 
 def get_parser():
