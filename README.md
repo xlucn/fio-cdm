@@ -20,21 +20,21 @@ See `grep TODO fio-cdm`
 ## Usage
 
 ```
-usage: fio-cdm [target] [-0] [-a job] [-E] [-f jobfile] [-n number] [-s size] [-x [mix]]
+usage: fio-cdm target [-h] [-0] [-a job] [-E] [-f jobfile] [-n number] [-s size] [-x [mix]]
 
 positional arguments:
-  target      The path of the directory to test, default to current directory.
+  target      The path of the directory to test.
 
 optional arguments:
-  -0          Initialize buffers with zeros instead of random data
-  -a job      Manually add multiple jobs. Override default. Format is "seq|rnd,<queue depth>,<thread number>".
-              This option can be used more than once.
-  -E          Disable extra information (iops and latency) for random IO tests.
-  -f jobfile  Save jobfile and quit without running fio. Use '-' to print to stdout.
+  -h, --help  show this help message and exit
+  -0          Initialize buffers with zeros. Default to use random buffers.
+  -a job      Manually add multiple jobs. Format is "seq|rnd,<queue depth>,<thread number>".
+              This overrides the preset jobs. This option can be used more than once.
+  -E          Disable extra information (iops, latency) for random IO tests. Default is enabled.
+  -f jobfile  Save jobfile and quit without running fio. Use "-" to print to stdout.
   -n number   Number of tests, default is 5.
-  -s size     The size of file I/O, same as the fio parameter, default is 1G.
-  -x [mix]    Add mixed rw test, default is disabled.
-              <mix> is read percentage, default is 70 if not specified.
+  -s size     The size of file I/O. It is directly passed to fio. Default is 1G.
+  -x [mix]    Add mixed rw test. Default is disabled. <mix> is read percentage. Default is 70.
 ```
 
 ### Sample output
@@ -59,15 +59,15 @@ tests: 5, size: 1G, target: . 173.3GiB/405.1GiB
 
 Set test file size to 512MB, 5 test runs with read, write and mix tests:
 
-    fio-cdm -s 512m -n 5 -x
+    fio-cdm . -s 512m -n 5 -x
 
 Manually add jobs to replace the default ones:
 
-    fio-cdm -a seq,1,1 -a seq,32,1 -a rnd,16,8
+    fio-cdm . -a seq,1,1 -a seq,32,1 -a rnd,16,8
 
-Show the equivalent command directly with fio (without running the test):
+Show the equivalent fio command directly (without running the test):
 
-    fio-cdm -f - | fio --showcmd -
+    fio-cdm . -f - | fio --showcmd -
 
 ### Note
 
