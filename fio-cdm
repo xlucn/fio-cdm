@@ -12,22 +12,22 @@ import subprocess
 def readable2byte(raw):
     num = raw.lower().rstrip("b").rstrip("i")
 
-    units = {'k': 1, 'm': 2, 'g': 3, 't': 4}
+    units = {'k': 1, 'm': 2, 'g': 3, 't': 4, 'p': 5}
     if num[-1] in units.keys():
         return int(num[:-1]) * 1024 ** units[num[-1]]
     elif num[-1].isdigit():
         return int(num)
     else:
-        logging.error("Unrecognised size: %s. Largest unit allowed is TB", raw)
+        logging.error("Unrecognised size: %s", raw)
         exit(1)
 
 
 def byte2readable(num):
-    for unit in ['', 'Ki', 'Mi', 'Gi']:
+    for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB']:
         if abs(num) < 1024.0:
-            return "%3.1f%sB" % (num, unit)
+            return "%3.1f%s" % (num, unit)
         num /= 1024.0
-    return "%.1f%sB" % (num, 'Ti')
+    return "%.1f%s" % (num, 'PiB')
 
 
 class Job:
