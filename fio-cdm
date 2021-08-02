@@ -60,17 +60,16 @@ class Job:
         if os.name == 'nt':
             self._config.read_dict({'global': {'thread': None}})
 
+        self._header = "|Name        |  Read(MB/s)| Write(MB/s)|"
+        self._sep = "|------------|------------|------------|"
+        self._template_row = "|{jobname}|{read:12.2f}|{write:12.2f}|"
         if args.mix:
-            self._header = "|Name        |  Read(MB/s)| Write(MB/s)|   Mix(MB/s)|\n" + \
-                           "|------------|------------|------------|------------|"
-            self._template_row = "|{jobname}|{read:12.2f}|{write:12.2f}|{mix:12.2f}|"
-        else:
-            self._header = "|Name        |  Read(MB/s)| Write(MB/s)|\n" + \
-                           "|------------|------------|------------|"
-            self._template_row = "|{jobname}|{read:12.2f}|{write:12.2f}|"
+            self._header += "   Mix(MB/s)|"
+            self._sep += "------------|"
+            self._template_row += "{mix:12.2f}|"
 
-    def _jobname_templ(self, job):
-        return "{}-{{rw}}-{}-q{}-t{}".format(job["rnd"], job["bs"], job["q"], job["t"])
+    def _jobname_templ(self, job, rw):
+        return "{}-{rw}-{}-q{}-t{}".format(job["rnd"], job["bs"], job["q"], job["t"], rw=rw)
 
     def _displayname(self, job):
         return "{}{} Q{:<2}T{:<2}".format(job["rnd"], job["bs"], job["q"], job["t"]).upper()
@@ -94,7 +93,7 @@ class Job:
 
         for rw in ["read", "write", "rw"] if args.mix else ["read", "write"]:
             self._config.read_dict({
-                self._jobname_templ(job).format(rw=rw): {
+                self._jobname_templ(job, rw): {
                     'rw': rw if rnd_type == 'seq' else 'rand' + rw,
                     'bs': blocksize,
                     'rwmixread': args.mix,
@@ -115,10 +114,12 @@ class Job:
         space_info = self._check_disk_space()
         print("tests: {}, size: {}, target: {} {}".format(
             args.number,
-            args.size,
+            byte2readable(readable2byte(args.size)),
             os.path.realpath(args.target),
             space_info
         ))
+        if args.mix:
+            print("Mixed rw: read {:2.0f}%, write {:2.0f}%".format(args.mix, 100 - args.mix))
 
         try:
             res = run(['fio', '--output-format', 'json', self._jobfile_name], stdout=PIPE)
@@ -139,28 +140,27 @@ class Job:
         info = {job.pop("jobname"): job for job in fio_output["jobs"]}
         logging.debug(info)
 
-        self._print_result(info)
+        self._print(info)
 
-    def _print_result_line(self, info, job, name, f):
-        jobname_templ = self._jobname_templ(job)
-        read = info.get(jobname_templ.format(rw="read"))
-        write = info.get(jobname_templ.format(rw="write"))
-        mix = info.get(jobname_templ.format(rw="rw"))
-        print(self._template_row.format(
-            jobname=name,
-            read=f(read['read']),
-            write=f(write['write']),
-            mix=(f(mix['write']) * (100 - args.mix) +
-                 f(mix['read']) * args.mix) / 100.0 if args.mix else None
-        ))
+    def _printline(self, info, job, name, f):
+        read = f(info.get(self._jobname_templ(job, "read"))['read'])
+        write = f(info.get(self._jobname_templ(job, "write"))['write'])
+        if args.mix:
+            mixr = f(info.get(self._jobname_templ(job, "rw"))['read'])
+            mixw = f(info.get(self._jobname_templ(job, "rw"))['write'])
+            mix = (mixw * (100 - args.mix) + mixr * args.mix) / 100.0
+        else:
+            mix = None
+        print(self._template_row.format(jobname=name, read=read, write=write, mix=mix))
 
-    def _print_result(self, info):
+    def _print(self, info):
         print(self._header)
+        print(self._sep)
         for job in self._jobs:
-            self._print_result_line(info, job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
+            self._printline(info, job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
             if job['rnd'] == 'rnd' and args.extra_info:
-                self._print_result_line(info, job, "... IOPS    ", lambda d: d['iops'])
-                self._print_result_line(info, job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
+                self._printline(info, job, ". IOPS      ", lambda d: d['iops'])
+                self._printline(info, job, ". latency ns", lambda d: d['lat_ns']['mean'] / 1000)
 
     def _check_disk_space(self):
         du = shutil.disk_usage(args.target)
