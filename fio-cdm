@@ -46,8 +46,7 @@ class Job:
                 'size': args.size,
                 'direct': '1',
                 # borrowed configuration from shell version
-                'runtime': '25',
-                'ramp_time': '5',
+                'runtime': '5',
                 'refill_buffers': None,
                 'norandommap': None,
                 'randrepeat': '0',
