@@ -61,6 +61,15 @@ class Job:
         if os.name == 'nt':
             self._config.read_dict({'global': {'thread': None}})
 
+        if args.mix:
+            self._header = "|Name        |  Read(MB/s)| Write(MB/s)|   Mix(MB/s)|\n" + \
+                           "|------------|------------|------------|------------|"
+            self._template_row = "|{jobname}|{read:12.2f}|{write:12.2f}|{mix:12.2f}|"
+        else:
+            self._header = "|Name        |  Read(MB/s)| Write(MB/s)|\n" + \
+                           "|------------|------------|------------|"
+            self._template_row = "|{jobname}|{read:12.2f}|{write:12.2f}|"
+
     def _jobname_templ(self, job):
         return "{}-{{rw}}-{}-q{}-t{}".format(job["rnd"], job["bs"], job["q"], job["t"])
 
@@ -77,9 +86,9 @@ class Job:
     def create_job(self, rnd_type, queue_size, thread_num):
         try:
             blocksize = self._blocksize[rnd_type]
-        except KeyError:
-            logging.error("Job type only accepts \"seq\" and \"rnd\"")
-            exit(1)
+        except KeyError as e:
+            logging.error("Job type only accepts 'seq' and 'rnd'")
+            raise(e)
 
         job = {"rnd": rnd_type, "bs": blocksize, "q": queue_size, "t": thread_num}
         self._jobs.append(job)
@@ -133,48 +142,40 @@ class Job:
 
         self._print_result(info)
 
+    def _print_result_line(self, info, job, name, f):
+        jobname_templ = self._jobname_templ(job)
+        read = info.get(jobname_templ.format(rw="read"))
+        write = info.get(jobname_templ.format(rw="write"))
+        mix = info.get(jobname_templ.format(rw="rw"))
+        print(self._template_row.format(
+            jobname=name,
+            read=f(read['read']),
+            write=f(write['write']),
+            mix=(f(mix['write']) * (100 - args.mix) +
+                 f(mix['read']) * args.mix) / 100.0 if args.mix else None
+        ))
+
     def _print_result(self, info):
-        def _print_result_line(job, name, f):
-            jobname_templ = self._jobname_templ(job)
-            read = info.get(jobname_templ.format(rw="read"))
-            write = info.get(jobname_templ.format(rw="write"))
-            mix = info.get(jobname_templ.format(rw="rw"))
-            print(template_row.format(
-                jobname=name,
-                read=f(read['read']),
-                write=f(write['write']),
-                mix=(f(mix['write']) * (100 - args.mix) +
-                     f(mix['read']) * args.mix) / 100.0 if args.mix else None
-            ))
-
-        if args.mix:
-            print("|Name        | Read(MB/s)|Write(MB/s)|  Mix(MB/s)|\n"
-                  "|------------|-----------|-----------|-----------|")
-            template_row = "|{jobname}|{read:11.2f}|{write:11.2f}|{mix:11.2f}|"
-        else:
-            print("|Name        | Read(MB/s)|Write(MB/s)|\n"
-                  "|------------|-----------|-----------|")
-            template_row = "|{jobname}|{read:11.2f}|{write:11.2f}|"
-
+        print(self._header)
         for job in self._jobs:
-            _print_result_line(job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
+            self._print_result_line(info, job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
             if job['rnd'] == 'rnd' and args.extra_info:
-                _print_result_line(job, "... IOPS    ", lambda d: d['iops'])
-                _print_result_line(job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
+                self._print_result_line(info, job, "... IOPS    ", lambda d: d['iops'])
+                self._print_result_line(info, job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
 
     def _check_disk_space(self):
         du = shutil.disk_usage(args.target)
         needed = readable2byte(args.size)
         info = "{}/{}".format(byte2readable(du.used), byte2readable(du.total))
 
-        if du.free > needed:
+        if du.free >= needed:
             return info
-        else:
-            logging.error("Not enough space available in %s:", args.target)
-            logging.error("Needed: %s. Available: %s",
-                          byte2readable(needed),
-                          byte2readable(du.free))
-            exit(1)
+
+        logging.error("Not enough space available in %s:", args.target)
+        logging.error("Needed: %s. Available: %s",
+                      byte2readable(needed),
+                      byte2readable(du.free))
+        exit(1)
 
 
 def get_parser():
