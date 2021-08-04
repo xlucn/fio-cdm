@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# Author: Lu Xu <oliver_lew at outlook dot com>
+# License: MIT
+# Repo: https://github.com/OliverLew/fio-cdm
+
 import os
 import sys
 import json
