@@ -13,28 +13,13 @@ import configparser
 from subprocess import run, PIPE
 
 
-def readable2byte(raw):
-    try:
-        num = raw.lower().rstrip("b").rstrip("i")
-        units = {'k': 1, 'm': 2, 'g': 3, 't': 4, 'p': 5}
-        return int(num[:-1]) * 1024 ** units[num[-1]] if num[-1] in units else int(num)
-    except ValueError:
-        logging.error("Unrecognised size: %s", raw)
-        exit(1)
-
-
-def byte2readable(num):
-    for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB']:
-        if abs(num) < 1024.0:
-            return "%3.1f%s" % (num, unit)
-        num /= 1024.0
-    return "%.1f%s" % (num, 'PiB')
-
-
 class Job:
     def __init__(self, args):
         # Escape colon in disk label on Windows
         args.target = os.path.realpath(args.target).replace(':', '\\:')
+        # Standradize the size
+        args.size = self.readable2byte(args.size)
+
         self._jobs = []
         self._jobfile_name = 'jobfile'
         self._testfile_name = '.fio_testmark'
@@ -44,7 +29,6 @@ class Job:
             'global': {
                 'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
                 'filename': self._testfile_name,
-                # Escape colon in disk label on Windows
                 'size': args.size,
                 'directory': args.target,
                 'direct': '1',
@@ -70,6 +54,22 @@ class Job:
             self._header += "   Mix(MB/s)|"
             self._sep += "------------|"
             self._template_row += "{mix:12.2f}|"
+
+    def readable2byte(self, raw):
+        try:
+            num = raw.lower().rstrip("b").rstrip("i")
+            units = {'k': 1, 'm': 2, 'g': 3, 't': 4, 'p': 5}
+            return float(num[:-1]) * 1024 ** units[num[-1]] if num[-1] in units else float(num)
+        except ValueError:
+            logging.error("Unrecognised size: %s. Need: [0-9]*[KMGTP][i][B]", raw)
+            exit(1)
+
+    def byte2readable(self, num):
+        for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB']:
+            if abs(num) < 1024.0:
+                return "{:3.1f}{}".format(num, unit)
+            num /= 1024.0
+        return "{:.1f}{}".format(num, 'PiB')
 
     def _jobname_templ(self, job, rw):
         return "{}-{rw}-{}-q{}-t{}".format(job["rnd"], job["bs"], job["q"], job["t"], rw=rw)
@@ -111,7 +111,7 @@ class Job:
         space_info = self._check_disk_space()
         print("tests: {}, size: {}, target: {} {}".format(
             args.number,
-            byte2readable(readable2byte(args.size)),
+            self.byte2readable(args.size),
             args.target,
             space_info
         ))
@@ -167,16 +167,14 @@ class Job:
 
     def _check_disk_space(self):
         du = shutil.disk_usage(args.target)
-        needed = readable2byte(args.size)
-        info = "{}/{}".format(byte2readable(du.used), byte2readable(du.total))
 
-        if du.free >= needed:
-            return info
+        if du.free >= args.size:
+            return "{}/{}".format(self.byte2readable(du.used), self.byte2readable(du.total))
 
         logging.error("Not enough space available in %s:", args.target)
         logging.error("Needed: %s. Available: %s",
-                      byte2readable(needed),
-                      byte2readable(du.free))
+                      self.byte2readable(args.size),
+                      self.byte2readable(du.free))
         exit(1)
 
 
