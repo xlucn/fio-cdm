@@ -14,14 +14,11 @@ from subprocess import run, PIPE
 
 
 def readable2byte(raw):
-    num = raw.lower().rstrip("b").rstrip("i")
-
-    units = {'k': 1, 'm': 2, 'g': 3, 't': 4, 'p': 5}
-    if num[-1] in units.keys():
-        return int(num[:-1]) * 1024 ** units[num[-1]]
-    elif num[-1].isdigit():
-        return int(num)
-    else:
+    try:
+        num = raw.lower().rstrip("b").rstrip("i")
+        units = {'k': 1, 'm': 2, 'g': 3, 't': 4, 'p': 5}
+        return int(num[:-1]) * 1024 ** units[num[-1]] if num[-1] in units else int(num)
+    except ValueError:
         logging.error("Unrecognised size: %s", raw)
         exit(1)
 
