@@ -6,7 +6,7 @@ import shutil
 import argparse
 import logging
 import configparser
-import subprocess
+from subprocess import run, PIPE
 
 
 def readable2byte(raw):
@@ -62,16 +62,10 @@ class Job:
             self._config.read_dict({'global': {'thread': None}})
 
     def _jobname_templ(self, job):
-        return "{}-{{rw}}-{}-q{}-t{}".format(job["rnd"],
-                                             job["bs"],
-                                             job["q"],
-                                             job["t"])
+        return "{}-{{rw}}-{}-q{}-t{}".format(job["rnd"], job["bs"], job["q"], job["t"])
 
     def _displayname(self, job):
-        return "{}{} Q{:<2}T{:<2}".format(job["rnd"],
-                                          job["bs"],
-                                          job["q"],
-                                          job["t"]).upper()
+        return "{}{} Q{:<2}T{:<2}".format(job["rnd"], job["bs"], job["q"], job["t"]).upper()
 
     def _create_jobfile(self, jobfile):
         if jobfile == '-':
@@ -87,12 +81,7 @@ class Job:
             logging.error("Job type only accepts \"seq\" and \"rnd\"")
             exit(1)
 
-        job = {
-            "rnd": rnd_type,
-            "bs": blocksize,
-            "q": queue_size,
-            "t": thread_num
-        }
+        job = {"rnd": rnd_type, "bs": blocksize, "q": queue_size, "t": thread_num}
         self._jobs.append(job)
 
         for rw in ["read", "write", "rw"] if args.mix else ["read", "write"]:
@@ -124,8 +113,7 @@ class Job:
         ))
 
         try:
-            output = subprocess.check_output(['fio', '--output-format', 'json',
-                                              self._jobfile_name])
+            res = run(['fio', '--output-format', 'json', self._jobfile_name], stdout=PIPE)
         except KeyboardInterrupt:
             logging.info('interrupted, cleaning up before exit...')
             exit()
@@ -135,7 +123,10 @@ class Job:
             if os.path.exists(os.path.join(args.target, self._testfile_name)):
                 os.remove(os.path.join(args.target, self._testfile_name))
 
-        fio_output = json.loads(output)
+        if res.returncode == 0:
+            fio_output = json.loads(res.stdout)
+        else:
+            exit()
         # rearrange to make jobname as keys
         info = {job.pop("jobname"): job for job in fio_output["jobs"]}
         logging.debug(info)
@@ -166,13 +157,10 @@ class Job:
             template_row = "|{jobname}|{read:11.2f}|{write:11.2f}|"
 
         for job in self._jobs:
-            _print_result_line(job, self._displayname(job),
-                               lambda d: d['bw_bytes'] / 10**6)
+            _print_result_line(job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
             if job['rnd'] == 'rnd' and args.extra_info:
-                _print_result_line(job, "... IOPS    ",
-                                   lambda d: d['iops'])
-                _print_result_line(job, "... latency ",
-                                   lambda d: d['lat_ns']['mean'] / 1000)
+                _print_result_line(job, "... IOPS    ", lambda d: d['iops'])
+                _print_result_line(job, "... latency ", lambda d: d['lat_ns']['mean'] / 1000)
 
     def _check_disk_space(self):
         du = shutil.disk_usage(args.target)
@@ -182,8 +170,7 @@ class Job:
         if du.free > needed:
             return info
         else:
-            logging.error("Not enough space available in %s:",
-                          args.target)
+            logging.error("Not enough space available in %s:", args.target)
             logging.error("Needed: %s. Available: %s",
                           byte2readable(needed),
                           byte2readable(du.free))
@@ -220,8 +207,7 @@ def get_parser():
                         help='Add mixed rw test. Default is disabled. '
                              '<mix> is read percentage. Default is 70.')
     # hidden option, enable to show debug information
-    parser.add_argument('-g', dest='debug', action='store_true',
-                        help=argparse.SUPPRESS)
+    parser.add_argument('-g', dest='debug', action='store_true', help=argparse.SUPPRESS)
     return parser
 
 
