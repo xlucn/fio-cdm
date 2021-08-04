@@ -200,8 +200,7 @@ def get_parser():
     parser.add_argument('-f', metavar='jobfile', dest='dump_jobfile',
                         help='Save jobfile and quit without running fio. '
                              'Use "-" to print to stdout.')
-    parser.add_argument('-n', metavar='number', dest='number',
-                        type=int, default=5,
+    parser.add_argument('-n', metavar='number', dest='number', type=int, default=5,
                         help='Number of tests, default is 5.')
     parser.add_argument('-s', metavar='size', dest='size', default='1G',
                         help='The size of file I/O. '
@@ -225,8 +224,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
                         format="%(message)s")
-
-    logging.debug(args)
 
     fio_job = Job(args)
     if args.jobs:
