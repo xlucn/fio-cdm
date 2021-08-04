@@ -32,7 +32,9 @@ def byte2readable(num):
 
 
 class Job:
-    def __init__(self):
+    def __init__(self, args):
+        # Escape colon in disk label on Windows
+        args.target = os.path.realpath(args.target).replace(':', '\\:')
         self._jobs = []
         self._jobfile_name = 'jobfile'
         self._testfile_name = '.fio_testmark'
@@ -43,8 +45,8 @@ class Job:
                 'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
                 'filename': self._testfile_name,
                 # Escape colon in disk label on Windows
-                'directory': os.path.realpath(args.target).replace(':', '\\:'),
                 'size': args.size,
+                'directory': args.target,
                 'direct': '1',
                 # borrowed configuration from shell version
                 'runtime': '5',
@@ -116,7 +118,7 @@ class Job:
         print("tests: {}, size: {}, target: {} {}".format(
             args.number,
             byte2readable(readable2byte(args.size)),
-            os.path.realpath(args.target),
+            args.target,
             space_info
         ))
         if args.mix:
@@ -226,7 +228,7 @@ if __name__ == '__main__':
 
     logging.debug(args)
 
-    fio_job = Job()
+    fio_job = Job(args)
     if args.jobs:
         for job in args.jobs:
             rnd_type, qd, tn = job.split(',')
