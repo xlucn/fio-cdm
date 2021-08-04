@@ -4,26 +4,26 @@ A python script to generate [CrystalDiskMark](https://crystalmark.info/en/softwa
 
 This is still WIP. I am a novice python coder and not familiar with fio, so the test result is expected to be imprecise. Correction and advices are welcome.
 
+## Requirement
+
+- python
+- fio
+
 ## Feature
 
-- Using Python
 - Try to provide some options of CrystalDiskMark, e.g., number of test runs, test file size, mixed r/w tests, zero buffers, etc
 - Show IOPS and latency results for random read/write tests.
   This actually combines the "default", "peak performance" and "real world performance" tests in CrystalDiskMark 7.0.0
 - Easy to add/customize new tests in command-line arguments
 - Parse `fio` result in json format to achieve more stability
 
-TODO
-
-See `grep TODO fio-cdm`
-
 ## Usage
 
 ```
-usage: fio-cdm target [-h] [-0] [-a job] [-E] [-f jobfile] [-n number] [-s size] [-x [mix]]
+usage: fio-cdm [target] [-h] [-0] [-a job] [-E] [-f jobfile] [-n number] [-s size] [-x [mix]]
 
 positional arguments:
-  target      The path of the directory to test.
+  target      The path of the directory to test. Default to current directory.
 
 optional arguments:
   -h, --help  show this help message and exit
@@ -36,6 +36,10 @@ optional arguments:
   -s size     The size of file I/O. It is directly passed to fio. Default is 1G.
   -x [mix]    Add mixed rw test. Default is disabled. <mix> is read percentage. Default is 70.
 ```
+
+### Note
+
+Recommend to put the `<target>` argument as the first one since some of the optional arguments will consume it. See [this bug of Python](https://bugs.python.org/issue9338).
 
 ### Sample output
 
@@ -59,19 +63,15 @@ tests: 5, size: 1G, target: . 173.3GiB/405.1GiB
 
 Set test file size to 512MB, 5 test runs with read, write and mix tests:
 
-    fio-cdm . -s 512m -n 5 -x
+    fio-cdm -s 512m -n 5 -x
 
 Manually add jobs to replace the default ones:
 
-    fio-cdm . -a seq,1,1 -a seq,32,1 -a rnd,16,8
+    fio-cdm -a seq,1,1 -a seq,32,1 -a rnd,16,8
 
 Show the equivalent fio command directly (without running the test):
 
-    fio-cdm . -f - | fio --showcmd -
-
-### Note
-
-Recommend to put the `<target>` argument as the first one since some of the optional arguments will consume it. See [this bug of Python](https://bugs.python.org/issue9338).
+    fio-cdm -f - | fio --showcmd -
 
 ## Similar projects
 
