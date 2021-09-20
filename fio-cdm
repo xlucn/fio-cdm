@@ -163,7 +163,7 @@ class Job:
             self._printline(info, job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
             if job['rnd'] == 'rnd' and args.extra_info:
                 self._printline(info, job, ". IOPS      ", lambda d: d['iops'])
-                self._printline(info, job, ". latency ns", lambda d: d['lat_ns']['mean'] / 1000)
+                self._printline(info, job, ". latency us", lambda d: d['lat_ns']['mean'] / 1000)
 
     def _check_disk_space(self):
         du = shutil.disk_usage(args.target)
