@@ -193,15 +193,28 @@ class Job:
                 self._printline(info, job, ". latency us", lambda d: d['lat_ns']['mean'] / 1000)
 
     def _check_disk_space(self):
-        du = shutil.disk_usage(args.target)
+        try:  # Python3
+            du = shutil.disk_usage(args.target)
+            free = du.free
+            used = du.used
+            total = du.total
+        except AttributeError:
+            if os == 'nt':  # Python2 + Windows? No way!
+                logging.warning("It's hard to get disk usage for current system and"
+                                " python version, skipping available space checking.")
+            else:  # Python2 + Unix-like
+                stat = os.statvfs(args.target)
+                free = stat.f_bsize * stat.f_bavail
+                total = stat.f_bsize * stat.f_blocks
+                used = total - stat.f_bsize * stat.f_bfree
 
-        if du.free >= args.size:
-            return "{}/{}".format(self.byte2readable(du.used), self.byte2readable(du.total))
+        if free >= args.size:
+            return "{}/{}".format(self.byte2readable(used), self.byte2readable(total))
 
         logging.error("Not enough space available in %s:", args.target)
         logging.error("Needed: %s. Available: %s",
                       self.byte2readable(args.size),
-                      self.byte2readable(du.free))
+                      self.byte2readable(free))
         exit(1)
 
 
