@@ -27,8 +27,7 @@ class EqualsSpaceRemover:
 
 class Job:
     def __init__(self, args):
-        # Escape colon in disk label on Windows
-        args.target = os.path.realpath(args.target).replace(':', '\\:')
+        args.target = os.path.realpath(args.target)
         # Standradize the size
         args.size = self.readable2byte(args.size)
 
@@ -42,7 +41,8 @@ class Job:
             'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
             'filename': self._testfile_name,
             'size': args.size,
-            'directory': args.target,
+            # Escape colon in disk label on Windows
+            'directory': args.target.replace(':', '\\:'),
             'direct': '1',
             # borrowed configuration from shell version
             'runtime': '5',
