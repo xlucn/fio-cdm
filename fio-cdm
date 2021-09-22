@@ -16,6 +16,15 @@ except ImportError:
     import ConfigParser as configparser
 
 
+class EqualsSpaceRemover:
+    # https://stackoverflow.com/a/47265271/10530288
+    def __init__(self, new_output_file):
+        self.output_file = new_output_file
+
+    def write(self, what):
+        self.output_file.write(what.replace(" = ", "=", 1))
+
+
 class Job:
     def __init__(self, args):
         # Escape colon in disk label on Windows
@@ -27,28 +36,31 @@ class Job:
         self._jobfile_name = 'jobfile'
         self._testfile_name = '.fio_testmark'
         self._blocksize = {'seq': '1m', 'rnd': '4k'}
-        self._config = configparser.ConfigParser(allow_no_value=True)
-        self._config.read_dict({
-            'global': {
-                'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
-                'filename': self._testfile_name,
-                'size': args.size,
-                'directory': args.target,
-                'direct': '1',
-                # borrowed configuration from shell version
-                'runtime': '5',
-                'refill_buffers': None,
-                'norandommap': None,
-                'randrepeat': '0',
-                'allrandrepeat': '0',
-                'group_reporting': None
-            }
-        })
+        self._config = configparser.RawConfigParser(allow_no_value=True)
+
+        global_section = {
+            'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
+            'filename': self._testfile_name,
+            'size': args.size,
+            'directory': args.target,
+            'direct': '1',
+            # borrowed configuration from shell version
+            'runtime': '5',
+            'refill_buffers': None,
+            'norandommap': None,
+            'randrepeat': '0',
+            'allrandrepeat': '0',
+            'group_reporting': None
+        }
+        self._config.add_section('global')
+        for k in global_section:
+            self._config.set('global', k, global_section[k])
+
         if args.zero_buffers:
-            self._config.read_dict({'global': {'zero_buffers': None}})
+            self._config.set('global', 'zero_buffers', None)
         # Windows does not support pthread mutexes, suppress the warning
         if os.name == 'nt':
-            self._config.read_dict({'global': {'thread': None}})
+            self._config.set('global', 'thread', None)
 
         self._header = "|Name        |  Read(MB/s)| Write(MB/s)|"
         self._sep = "|------------|------------|------------|"
@@ -82,10 +94,10 @@ class Job:
 
     def _create_jobfile(self, jobfile):
         if jobfile == '-':
-            self._config.write(sys.stdout, space_around_delimiters=False)
+            self._config.write(EqualsSpaceRemover(sys.stdout))
         else:
             with open(jobfile, 'w') as f:
-                self._config.write(f, space_around_delimiters=False)
+                self._config.write(EqualsSpaceRemover(f))
 
     def create_job(self, rnd_type, queue_size, thread_num):
         try:
@@ -98,17 +110,21 @@ class Job:
         self._jobs.append(job)
 
         for rw in ["read", "write", "rw"] if args.mix else ["read", "write"]:
-            self._config.read_dict({
-                self._jobname_templ(job, rw): {
-                    'rw': rw if rnd_type == 'seq' else 'rand' + rw,
-                    'bs': blocksize,
-                    'rwmixread': args.mix,
-                    'iodepth': queue_size,
-                    'numjobs': thread_num,
-                    'loops': args.number,
-                    'stonewall': None
-                }
-            })
+            section_name = self._jobname_templ(job, rw)
+
+            section_options = {
+                'rw': rw if rnd_type == 'seq' else 'rand' + rw,
+                'bs': blocksize,
+                'rwmixread': args.mix,
+                'iodepth': queue_size,
+                'numjobs': thread_num,
+                'loops': args.number,
+                'stonewall': None
+            }
+
+            self._config.add_section(section_name)
+            for k in section_options:
+                self._config.set(section_name, k, section_options[k])
 
     def run(self):
         if args.dump_jobfile:
@@ -198,7 +214,7 @@ def get_parser():
     parser.add_argument('-0', dest='zero_buffers', action='store_true',
                         help='Initialize buffers with zeros. '
                              'Default to use random buffers.')
-    parser.add_argument('-a', metavar='job', dest='jobs', action="append",
+    parser.add_argument('-a', metavar='job', dest='jobs', action="append", default=[],
                         help='Manually add multiple jobs. Format is '
                              '"seq|rnd,<queue depth>,<thread number>". '
                              'This overrides the preset jobs. '
@@ -235,11 +251,11 @@ if __name__ == '__main__':
                         format="%(message)s")
 
     fio_job = Job(args)
-    if args.jobs:
-        for job in args.jobs:
-            rnd_type, qd, tn = job.split(',')
-            fio_job.create_job(rnd_type, int(qd), int(tn))
-    else:
+    for job in args.jobs:
+        rnd_type, qd, tn = job.split(',')
+        fio_job.create_job(rnd_type, int(qd), int(tn))
+    if args.jobs == []:
+        # CrystalDiskMark defaults
         fio_job.create_job('seq',  8,  1)
         fio_job.create_job('seq',  1,  1)
         fio_job.create_job('rnd', 32, 16)
