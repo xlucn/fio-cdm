@@ -159,11 +159,17 @@ class Job:
             mix = None
         print(self._template_row.format(jobname=name, read=read, write=write, mix=mix))
 
+    def _info_get_bw_bytes(self, info):
+        try:
+            return info['bw_bytes'] / 10**6
+        except KeyError:
+            return info['bw'] / 10**3
+
     def _print(self, info):
         print(self._header)
         print(self._sep)
         for job in self._jobs:
-            self._printline(info, job, self._displayname(job), lambda d: d['bw_bytes'] / 10**6)
+            self._printline(info, job, self._displayname(job), self._info_get_bw_bytes)
             if job['rnd'] == 'rnd' and args.extra_info:
                 self._printline(info, job, ". IOPS      ", lambda d: d['iops'])
                 self._printline(info, job, ". latency us", lambda d: d['lat_ns']['mean'] / 1000)
