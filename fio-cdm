@@ -9,8 +9,11 @@ import json
 import shutil
 import argparse
 import logging
-import configparser
 from subprocess import run, PIPE
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 
 class Job:
