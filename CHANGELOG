@@ -1,0 +1,14 @@
+0.1.1 - 2021-09-22
+
+Changed:
+- The target argument is now optional, defaults to current directory.
+- Do not use 'ramp_time' in the job file to accelerate test of small sizes.
+- Added petabyte unit.
+
+Fixed:
+- Latency unit should be micro second (us), not nano second (ns).
+
+
+0.1.0 - 2021-02-08
+
+Initial release.
