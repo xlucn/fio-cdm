@@ -31,9 +31,9 @@ jobs:
           sudo apt-get install -y fio
           fio -v
 
+      - name: Test python3
+        run: python3 fio-cdm -s 1m
+        
       # Runs a set of commands using the runners shell
       - name: Test python2
         run: python2 fio-cdm -s 1m
-
-      - name: Test python3
-        run: python3 fio-cdm -s 1m
