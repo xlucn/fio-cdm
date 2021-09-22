@@ -9,7 +9,7 @@ import json
 import shutil
 import argparse
 import logging
-from subprocess import run, PIPE
+from subprocess import Popen, PIPE
 try:
     import configparser
 except ImportError:
@@ -127,8 +127,10 @@ class Job:
         if args.mix:
             print("Mixed rw: read {:2.0f}%, write {:2.0f}%".format(args.mix, 100 - args.mix))
 
+        FIO_COMMAND = ['fio', '--output-format', 'json', self._jobfile_name]
         try:
-            res = run(['fio', '--output-format', 'json', self._jobfile_name], stdout=PIPE)
+            res = Popen(FIO_COMMAND, stdout=PIPE)
+            output, _ = res.communicate()
         except KeyboardInterrupt:
             logging.info('interrupted, cleaning up before exit...')
             exit()
@@ -139,7 +141,7 @@ class Job:
                 os.remove(os.path.join(args.target, self._testfile_name))
 
         if res.returncode == 0:
-            fio_output = json.loads(res.stdout)
+            fio_output = json.loads(output)
         else:
             exit()
         # rearrange to make jobname as keys
