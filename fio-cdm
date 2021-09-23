@@ -204,6 +204,7 @@ class Job:
             if os == 'nt':  # Python2 + Windows? No way!
                 logging.warning("It's hard to get disk usage for current system and"
                                 " python version, skipping available space checking.")
+                return "Not avallable"
             else:  # Python2 + Unix-like
                 stat = os.statvfs(args.target)
                 free = stat.f_bsize * stat.f_bavail
