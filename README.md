@@ -1,6 +1,6 @@
 # fio-cdm
 
-A python script to generate [CrystalDiskMark](https://crystalmark.info/en/software/crystaldiskmark/)-style test result with [fio](https://github.com/axboe/fio). Should work across multi platforms as long as you have `fio` and `python` (need version 3.3 and above) in case you want to compare the results with CrystalDiskMark.
+A python script to generate [CrystalDiskMark](https://crystalmark.info/en/software/crystaldiskmark/)-style test result with [fio](https://github.com/axboe/fio). Should work across multi platforms as long as you have `fio` and `python` in case you want to compare the results with CrystalDiskMark.
 
 This is still WIP. I am a novice python coder and not familiar with fio, so the test result is expected to be imprecise. Correction and advices are welcome.
 
@@ -13,7 +13,7 @@ This is still WIP. I am a novice python coder and not familiar with fio, so the 
 
 - Try to provide some options of CrystalDiskMark, e.g., number of test runs, test file size, mixed r/w tests, zero buffers, etc
 - Show IOPS and latency results for random read/write tests.
-  This actually combines the "default", "peak performance" and "real world performance" tests in CrystalDiskMark 7.0.0
+  This actually combines the "default", "peak performance" and "real world performance" tests in CrystalDiskMark
 - Easy to add/customize new tests in command-line arguments
 - Parse `fio` result in json format to achieve more stability
 
@@ -43,7 +43,7 @@ Recommend to put the `<target>` argument as the first one since some of the opti
 
 ### Sample output
 
-The default tests are same as [CrystalDiskMark 7.0.0](https://crystalmark.info/en/software/crystaldiskmark/crystaldiskmark-main-menu/)
+The default tests are same as [CrystalDiskMark](https://crystalmark.info/en/software/crystaldiskmark/crystaldiskmark-main-menu/)
 
 ```
 tests: 5, size: 1G, target: . 173.3GiB/405.1GiB
