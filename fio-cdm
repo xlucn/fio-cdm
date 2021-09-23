@@ -207,8 +207,8 @@ class Job:
             used = total - stat.f_bsize * stat.f_bfree
         else:                               # Python2 + Windows? No way!
             logging.warning("It's hard to get disk usage for current system and"
-                            " python version, skipping available space checking.")
-            return "Not avallable"
+                            " python version,\nskipping available space checking.")
+            return "(disk usage not avallable)"
 
         if free >= args.size:
             return "{}/{}".format(self.byte2readable(used), self.byte2readable(total))
