@@ -1,3 +1,10 @@
+0.2.0
+
+Changed:
+- Work with more versions of python and fio, e.g., python2 and fio 3.1.
+- Added Github action for testing.
+
+
 0.1.1 - 2021-09-22
 
 Changed:
