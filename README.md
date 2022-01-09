@@ -7,6 +7,7 @@ This is still WIP. I am a novice python coder and not familiar with fio, so the 
 ## Requirement
 
 - python
+  - configparser module need to be installed for python2 (built-in for python3)
 - fio
 
 ## Feature

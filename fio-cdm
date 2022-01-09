@@ -3,26 +3,14 @@
 # License: MIT
 # Repo: https://github.com/OliverLew/fio-cdm
 
+import argparse
+import configparser
+import logging
 import os
-import sys
 import json
 import shutil
-import argparse
-import logging
+import sys
 from subprocess import Popen, PIPE
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
-
-
-class EqualsSpaceRemover:
-    # https://stackoverflow.com/a/47265271/10530288
-    def __init__(self, new_output_file):
-        self.output_file = new_output_file
-
-    def write(self, what):
-        self.output_file.write(what.replace(" = ", "=", 1))
 
 
 class Job:
@@ -95,10 +83,10 @@ class Job:
 
     def _create_jobfile(self, jobfile):
         if jobfile == '-':
-            self._config.write(EqualsSpaceRemover(sys.stdout))
+            self._config.write(sys.stdout)
         else:
             with open(jobfile, 'w') as f:
-                self._config.write(EqualsSpaceRemover(f))
+                self._config.write(f)
 
     def create_job(self, rnd_type, queue_size, thread_num):
         try:
