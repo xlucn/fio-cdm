@@ -62,6 +62,7 @@ class Job:
         if os.name == 'nt':
             self._config.set('global', 'thread', None)
 
+        # TODO: fit output of different lengths
         self._header = "|Name        |  Read(MB/s)| Write(MB/s)|"
         self._sep = "|------------|------------|------------|"
         self._template_row = "|{jobname}|{read:12.2f}|{write:12.2f}|"
@@ -179,17 +180,15 @@ class Job:
             mix = None
         print(self._template_row.format(jobname=name, read=read, write=write, mix=mix))
 
-    def _info_get_bw_bytes(self, info):
-        try:
-            return info['bw_bytes'] / 10**6
-        except KeyError:
-            return info['bw'] / 10**3
+    def _info_get_bw_megabytes(self, info):
+        # Unit of I/O speed, use MB/s(10^6) instead of MiB/s(2^30).
+        return info.get('bw_bytes', info['bw'] * 1e3) / 1e6
 
     def _print(self, info):
         print(self._header)
         print(self._sep)
         for job in self._jobs:
-            self._printline(info, job, self._displayname(job), self._info_get_bw_bytes)
+            self._printline(info, job, self._displayname(job), self._info_get_bw_megabytes)
             if job['rnd'] == 'rnd' and args.extra_info:
                 self._printline(info, job, ". IOPS      ", lambda d: d['iops'])
                 self._printline(info, job, ". latency us", lambda d: d['lat_ns']['mean'] / 1000)
@@ -259,7 +258,6 @@ if __name__ == '__main__':
     # TODO: Real-time visual feedback, with fio --debug=io? Seams hard.
     # TODO: Linux: vendor and model with lsblk -o +VENDOR,MODEL or /sys/block/*/device/{vendor,model}
     # TODO: Specify device instead of directory
-    # Unit of I/O speed, use MB/s(10^6) instead of MiB/s(2^30).
     parser = get_parser()
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
