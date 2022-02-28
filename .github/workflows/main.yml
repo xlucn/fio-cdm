@@ -67,12 +67,6 @@ jobs:
       - name: Install fio and python
         run: |
           choco install fio -y --no-progress
-          choco install python2 -y --no-progress
-
-      - name: Test python2
-        run: |
-          fio -v
-          python2 fio-cdm -s 1m
 
       - name: Test python3
         run: |
