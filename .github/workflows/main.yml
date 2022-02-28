@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install fio and python
-        run: sudo apt-get install -y fio python2
+        run: sudo apt-get install -y fio python2 python-configparser
 
       - name: Test python3
         run: |
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install fio and check the version
-        run: sudo apt-get install -y fio
+        run: sudo apt-get install -y fio python-configparser
 
       - name: Test python3
         run: |
