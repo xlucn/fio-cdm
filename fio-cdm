@@ -28,8 +28,9 @@ class Job:
             'global': {
                 'ioengine': 'windowsaio' if os.name == 'nt' else 'libaio',
                 'filename': self._testfile_name,
+                # escape colons, see man page 'filename'
+                'directory': args.target.replace(':', r'\:'),
                 'size': args.size,
-                'directory': args.target,
                 'direct': '1',
                 # borrowed configuration from shell version
                 'runtime': '5',
