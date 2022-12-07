@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 import sys
+import tempfile
 from subprocess import Popen, PIPE
 
 
@@ -20,7 +21,8 @@ class Job:
         args.size = self.readable2byte(args.size)
 
         self._jobs = []
-        self._jobfile_name = 'jobfile'
+        self._jobfile_id, self._jobfile_name = tempfile.mkstemp(suffix='.jobfile')
+        self._jobfile = os.fdopen(self._jobfile_id, 'w')
         self._testfile_name = '.fio_testmark'
         self._blocksize = {'seq': '1m', 'rnd': '4k'}
         self._config = configparser.ConfigParser(allow_no_value=True)
@@ -78,19 +80,12 @@ class Job:
     def _displayname(self, job):
         return "{}{} Q{:<2}T{:<2}".format(job["rnd"], job["bs"], job["q"], job["t"]).upper()
 
-    def _create_jobfile(self, jobfile):
-        if jobfile == '-':
-            self._config.write(sys.stdout, space_around_delimiters=False)
-        else:
-            with open(jobfile, 'w') as f:
-                self._config.write(f, space_around_delimiters=False)
-
     def create_job(self, rnd_type, queue_size, thread_num):
         try:
             blocksize = self._blocksize[rnd_type]
         except KeyError as e:
             logging.error("Job type only accepts 'seq' and 'rnd'")
-            raise(e)
+            raise e
 
         job = {"rnd": rnd_type, "bs": blocksize, "q": queue_size, "t": thread_num}
         self._jobs.append(job)
@@ -113,10 +108,15 @@ class Job:
         space_info = self._check_disk_space()
 
         if args.dump_jobfile:
-            self._create_jobfile(args.dump_jobfile)
+            if args.dump_jobfile == '-':
+                self._config.write(sys.stdout, space_around_delimiters=False)
+            else:
+                with open(args.dump_jobfile, 'w') as fp:
+                    self._config.write(fp, space_around_delimiters=False)
             exit()
         else:
-            self._create_jobfile(self._jobfile_name)
+            self._config.write(self._jobfile, space_around_delimiters=False)
+            self._jobfile.close()
 
         print("tests: {}, size: {}, target: {} {}".format(
             args.number,
