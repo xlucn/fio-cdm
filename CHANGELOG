@@ -1,4 +1,14 @@
-0.2.0
+0.2.1 - 2022-12-07
+
+Changed:
+- Create jobfile with a temporary filepath, instead of in current directory.
+- Require external configparser module for python2.
+
+Fixed:
+- Failure on Windows.
+
+
+0.2.0 - 2021-09-23
 
 Changed:
 - Work with more versions of python and fio, e.g., python2 and fio 3.1.
