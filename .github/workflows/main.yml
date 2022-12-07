@@ -20,8 +20,9 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: Install fio and python
-        run: sudo apt-get install -y fio python2 python-configparser
+      - name: Install fio, python2 and python2's configparser
+        run: |
+          sudo apt-get install -y fio python2 python-configparser
 
       - name: Test python3
         run: |
@@ -33,38 +34,16 @@ jobs:
           fio -v
           python2 fio-cdm -s 1m
 
-  ubuntu18:
+  windows2022:
     # The type of runner that the job will run on
-    runs-on: ubuntu-18.04
+    runs-on: windows-2022
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: Install fio and check the version
-        run: sudo apt-get install -y fio python-configparser
-
-      - name: Test python3
-        run: |
-          fio -v
-          python3 fio-cdm -s 1m
-
-      - name: Test python2
-        run: |
-          fio -v
-          python2 fio-cdm -s 1m
-
-  windows2019:
-    # The type of runner that the job will run on
-    runs-on: windows-2019
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      - name: Install fio and python
+      - name: Install fio
         run: |
           choco install fio -y --no-progress
 
