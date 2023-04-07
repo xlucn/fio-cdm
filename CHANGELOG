@@ -1,0 +1,44 @@
+1.0.0 - 2023-04-07
+
+Changed:
+- Added Windows fio binary, otherwise use installed version
+- Create proper Python project structure
+- Provide entrypoint from __main__ file
+
+Aded:
+- Provided packaging via setuptools
+- Provide tests
+- Provide .gitignore
+- Provide pre-commit configuration for lint and style
+
+0.2.1 - 2022-12-07
+
+Changed:
+- Create jobfile with a temporary filepath, instead of in current directory.
+- Require external configparser module for python2.
+
+Fixed:
+- Failure on Windows.
+
+
+0.2.0 - 2021-09-23
+
+Changed:
+- Work with more versions of python and fio, e.g., python2 and fio 3.1.
+- Added Github action for testing.
+
+
+0.1.1 - 2021-09-22
+
+Changed:
+- The target argument is now optional, defaults to current directory.
+- Do not use 'ramp_time' in the job file to accelerate test of small sizes.
+- Added petabyte unit.
+
+Fixed:
+- Latency unit should be micro second (us), not nano second (ns).
+
+
+0.1.0 - 2021-02-08
+
+Initial release.
