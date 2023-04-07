@@ -15,7 +15,13 @@ Python script packaging of [fio-cdm](https://github.com/OliverLew/fio-cdm), a py
 - Easy to add/customize new tests in command-line arguments
 - Parse `fio` result in json format to achieve more stability
 
+## Installation
+
+Install via Python `pip install .`
+
 ## Usage
+
+Call script via `cdm` after pip installation from anywhere.
 
 ```
 usage: cdm [target] [-h] [-0] [-a job] [-E] [-f jobfile] [-n number] [-s size] [-x [mix]]
