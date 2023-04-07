@@ -1,0 +1,13 @@
+# Tools
+.ruff_cache/
+
+# Testing
+.pytest_cache/
+
+# Virtual environment
+venv/
+
+# Python
+__pycache__/
+*.egg-info
+*.pyc
