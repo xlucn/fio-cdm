@@ -10,7 +10,7 @@ authors = [
 ]
 description = "A python script to generate CrystalDiskMark-style test result with fio. Should work across multi platforms."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9.13"
 keywords = ["CrystalDiskMark", "disk utilities", "hdd", "ssd"]
 license = {text = "MIT"}
 dependencies = []
